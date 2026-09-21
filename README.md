@@ -1,6 +1,6 @@
 # Typesafe 21
 
-AI-powered blackjack simulator where three players with different strategies compete head-to-head, powered by [TypeSafe System One](https://docs.typesafe.ai). Available as both a **terminal app** (Textual TUI) and a **web app** (Next.js + FastAPI).
+AI-powered blackjack simulator where three players with different strategies compete head-to-head, powered by [TypeSafe System One](https://docs.typesafe.ai). Available as both a **terminal app** (Textual TUI) and a **web app** (Next.js + FastAPI) with a [Hallmark](https://github.com/Nutlope/hallmark)-designed Midnight theme.
 
 > **Note:** The terminal version is being sunset in favor of the web version. The web app provides the same gameplay with a richer UI, 3D visuals, animated cards, and session history. The terminal code remains in the repo for reference but is no longer actively maintained.
 
@@ -104,6 +104,8 @@ The web version reads these environment variables:
 ```
 typesafe21/
   dev.sh                 # Start frontend + backend (Ctrl+C to stop)
+  DESIGN.md              # Hallmark Midnight design system (tokens, palette, motion)
+  PLAN_WEB_REDESIGN.md   # Full redesign plan (8 phases)
   main.py                # Terminal entry point
   game.py                # Round logic, dealing, payouts, split handling
   player.py              # Player classes (Random, BasicStrategy, AI)
@@ -132,8 +134,10 @@ typesafe21/
   frontend/              # Next.js 19 + React + Three.js
     src/
       app/
-        page.tsx         # Landing page
-        game/page.tsx    # Main game board
+        globals.css      # Hallmark Midnight tokens, motion, reduced-motion
+        layout.tsx       # Root layout with data-theme="midnight"
+        page.tsx         # Landing page (Marquee Hero, N7 nav, Ft5 footer)
+        game/page.tsx    # Main game board (asymmetric layout)
         history/page.tsx # Session history browser
       stores/
         gameStore.ts     # Zustand state (game state, WebSocket, animations)
@@ -147,7 +151,7 @@ typesafe21/
         ui/              # shadcn/ui components (button, badge, card, etc.)
       components3d/      # Three.js scenes (ChipStack3D, CardShuffle)
 
-  ui/                    # Terminal UI (Textual)
+  ui/                    # Terminal UI (Textual) [sunset, kept for reference]
     app.py               # Textual app, screen routing
     styles.tss           # Textual CSS
     screens/

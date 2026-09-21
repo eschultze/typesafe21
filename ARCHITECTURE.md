@@ -177,16 +177,16 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 
 ### Key Components
 
-- `PlayingCard` — Animated card with spring physics (Motion), suit-colored text
-- `PlayerHand` — Player hand panel with cards, badges (BJ/bust), active glow
-- `DealerHand` — Dealer hand with card hiding until reveal phase
-- `GameControls` — New Game, Play Round, End Session, Auto Play buttons
-- `Scoreboard` — Player balances with animated profit indicators
-- `ShoeIndicator` — Progress bar showing shoe depletion + true count badge
-- `BalanceChart` — SVG line chart of AI balance over time
-- `CardTracker` — Bar chart showing card composition by rank
-- `StatsPanel` — AI average bet, confidence, round count
-- `LastAction` — Displays previous round's results with win/lose/push badges
+- `PlayingCard` — Animated card with spring physics (Motion), suit-colored text, tokenized background/border
+- `PlayerHand` — Player hand panel with cards, badges (BJ/bust), accent glow, profit/loss coloring
+- `DealerHand` — Dealer hand with card hiding until reveal phase, themed transitions
+- `GameControls` — New Game, Play Round (accent), End Session, Auto Play with 8-state styling
+- `Scoreboard` — Player balances with animated profit indicators, varied column widths
+- `ShoeIndicator` — Progress bar (accent) showing shoe depletion + true count badge
+- `BalanceChart` — SVG line chart of AI balance over time with themed stroke/fill colors
+- `CardTracker` — Bar chart showing card composition by rank with themed bar colors
+- `StatsPanel` — AI average bet, confidence, round count on card background
+- `LastAction` — Displays previous round's results with profit/loss badges
 - `WinSound` — Plays cash register sound on AI win
 - `HeroScene` / `ChipScene` — Three.js 3D scenes
 
@@ -236,3 +236,23 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 7. **Shared game logic** — The `backend/rules/` directory mirrors root game modules with `to_dict()` serialization, keeping terminal and web independent.
 
 8. **Real-time updates** — WebSocket broadcasts full game state after every phase, enabling smooth animations and live updates.
+
+## Design System — Midnight (Hallmark)
+
+The web frontend uses a [Hallmark](https://github.com/Nutlope/hallmark)-designed Midnight theme. Tokens are defined in `frontend/src/app/globals.css` and consumed by all components via CSS custom properties.
+
+**Palette** (OKLCH):
+- Paper: `oklch(15% 0.022 250)` — dark blue-grey base
+- Ink: `oklch(95% 0.008 230)` — primary text
+- Accent: `oklch(72% 0.16 220)` — electric blue (buttons, highlights, progress)
+- Neutral scale: tinted toward hue 250 (not pure grey)
+
+**Typography**: Geist Sans (`--font-geist-sans`) and Geist Mono (`--font-geist-mono`) with `tabular-nums` on all data displays.
+
+**Spacing scale**: `--space-1` (4px) through `--space-16` (64px), linear 4px step.
+
+**Motion**: `--dur-micro` (120ms), `--dur-short` (220ms), `--dur-long` (420ms), `--ease-out` for emphasis. `prefers-reduced-motion` collapses all durations to 0ms.
+
+**Layout**: Landing page uses Marquee Hero with N7 Brutal Slab nav and Ft5 Statement footer. Game page uses asymmetric column widths (`1.2fr / 1fr / 0.8fr`) for visual variety.
+
+See `DESIGN.md` for the full token reference and component shape specifications.
