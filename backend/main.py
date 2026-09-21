@@ -124,5 +124,12 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
 
 if __name__ == "__main__":
+    import signal
+    import sys
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    def handle_sigint(sig, frame):
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, handle_sigint)
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="error")
