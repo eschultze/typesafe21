@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:all": "concurrently -n back,front -c blue,green \"cd ../backend && python3 main.py\" \"next dev\"",
+    "dev:all": "concurrently -n back,front -c blue,green \"cd ../backend && source venv/bin/activate && python3 main.py\" \"next dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

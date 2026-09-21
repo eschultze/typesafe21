@@ -43,8 +43,8 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
         )}
         <motion.span
           key={hand.value}
-          initial={{ scale: 1.3, color: "#22c55e" }}
-          animate={{ scale: 1, color: "inherit" }}
+          initial={{ scale: 1.3 }}
+          animate={{ scale: 1 }}
           className="text-lg font-bold"
         >
           {hand.value}
