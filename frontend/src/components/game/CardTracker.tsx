@@ -6,6 +6,8 @@ import { useGameStore } from "@/stores/gameStore";
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 const TOTAL_PER_RANK = 24; // 6 decks x 4 suits
 
+const BAR_HEIGHT_PX = 80; // matches h-20 on mobile; md:h-28 (112px) handled via scale
+
 export function CardTracker() {
   const playedRanks = useGameStore((s) => s.state.shoe.played_ranks) || {};
 
@@ -15,7 +17,7 @@ export function CardTracker() {
   return (
     <div className="flex flex-col p-3 rounded-[10px] bg-card border border-border">
       <span className="text-xs text-muted-foreground mb-2">Cards Observed</span>
-      <div className="flex gap-1 h-20 md:h-28">
+      <div className="flex gap-1" style={{ height: BAR_HEIGHT_PX }}>
         {/* Y-axis labels */}
         <div className="flex flex-col justify-between text-[9px] text-muted-foreground pr-1 pb-4 tabular-nums">
           <span>{maxPlayed}</span>
@@ -28,6 +30,7 @@ export function CardTracker() {
           {RANKS.map((rank) => {
             const played = playedRanks[rank] || 0;
             const ratio = maxPlayed > 0 ? played / maxPlayed : 0;
+            const barHeight = Math.round(ratio * BAR_HEIGHT_PX);
             const fillPct = (played / TOTAL_PER_RANK) * 100;
 
             return (
@@ -35,7 +38,7 @@ export function CardTracker() {
                 <motion.div
                   className="w-full rounded-t"
                   initial={{ height: 0 }}
-                  animate={{ height: `${ratio * 100}%` }}
+                  animate={{ height: barHeight }}
                   transition={{ type: "spring", stiffness: 200, damping: 20 }}
                   style={{
                     backgroundColor:
@@ -44,7 +47,6 @@ export function CardTracker() {
                         : fillPct > 50
                         ? "var(--chart-4)"
                         : "var(--color-profit)",
-                    minHeight: played > 0 ? "2px" : "0px",
                   }}
                 />
                 <span className="text-[9px] text-muted-foreground leading-none">
