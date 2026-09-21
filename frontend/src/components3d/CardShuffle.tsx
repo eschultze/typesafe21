@@ -13,14 +13,6 @@ function Card({ index }: { index: number }) {
   const color = CARD_COLORS[index % CARD_COLORS.length];
   const stagger = index * 0.03;
 
-  const { frontMat, backMat } = useMemo(
-    () => ({
-      frontMat: new THREE.MeshStandardMaterial({ color: 0xffffff }),
-      backMat: new THREE.MeshStandardMaterial({ color }),
-    }),
-    [color]
-  );
-
   useFrame((state) => {
     if (!groupRef.current) return;
 
@@ -52,11 +44,11 @@ function Card({ index }: { index: number }) {
     <group ref={groupRef} position={[xPos, 0, 0]} rotation={[0, 0, rotZ]}>
       <mesh position={[0, 0, 0.005]}>
         <planeGeometry args={[0.55, 0.78]} />
-        <primitive object={frontMat} attach="material" />
+        <meshStandardMaterial color="white" />
       </mesh>
       <mesh position={[0, 0, -0.005]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[0.55, 0.78]} />
-        <primitive object={backMat} attach="material" />
+        <meshStandardMaterial color={color} />
       </mesh>
     </group>
   );

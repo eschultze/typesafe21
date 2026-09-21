@@ -115,7 +115,6 @@ export function ChipScene({
   return (
     <Canvas
       camera={{ position: [0, 1.5, 4], fov: 35 }}
-      frameloop="demand"
       style={{ background: "transparent" }}
     >
       <ambientLight intensity={0.6} />
