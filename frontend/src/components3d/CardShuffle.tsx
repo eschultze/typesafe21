@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useRef, useMemo } from "react";
+import { useRef } from "react";
 import * as THREE from "three";
 
 const CARD_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#ec4899"];
@@ -44,24 +44,20 @@ function Card({ index }: { index: number }) {
     <group ref={groupRef} position={[xPos, 0, 0]} rotation={[0, 0, rotZ]}>
       <mesh position={[0, 0, 0.005]}>
         <planeGeometry args={[0.55, 0.78]} />
-        <meshStandardMaterial color="white" />
+        <meshBasicMaterial color="white" />
       </mesh>
       <mesh position={[0, 0, -0.005]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[0.55, 0.78]} />
-        <meshStandardMaterial color={color} />
+        <meshBasicMaterial color={color} />
       </mesh>
     </group>
   );
 }
 
 export function CardShuffle() {
-  const cards = useMemo(() => Array.from({ length: TOTAL_CARDS }, (_, i) => i), []);
-
   return (
     <Canvas camera={{ position: [0, 0, 3.5], fov: 40 }}>
-      <ambientLight intensity={0.8} />
-      <pointLight position={[3, 3, 5]} intensity={0.6} />
-      {cards.map((i) => (
+      {Array.from({ length: TOTAL_CARDS }, (_, i) => (
         <Card key={i} index={i} />
       ))}
     </Canvas>
