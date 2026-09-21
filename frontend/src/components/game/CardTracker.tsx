@@ -4,46 +4,56 @@ import { motion } from "motion/react";
 import { useGameStore } from "@/stores/gameStore";
 
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-
 const TOTAL_PER_RANK = 24; // 6 decks × 4 suits
 
 export function CardTracker() {
   const playedRanks = useGameStore((s) => s.state.shoe.played_ranks) || {};
 
-  const maxPlayed = Math.max(...RANKS.map((r) => playedRanks[r] || 0), 1);
+  const counts = RANKS.map((r) => playedRanks[r] || 0);
+  const maxPlayed = Math.max(...counts, 1);
 
   return (
     <div className="flex flex-col p-3 rounded-lg bg-white/5 border border-white/10">
       <span className="text-xs text-muted-foreground mb-2">Cards Observed</span>
-      <div className="flex items-end gap-1 h-24">
-        {RANKS.map((rank) => {
-          const played = playedRanks[rank] || 0;
-          const remaining = TOTAL_PER_RANK - played;
-          const pct = (played / TOTAL_PER_RANK) * 100;
+      <div className="flex gap-1 h-28">
+        {/* Y-axis labels */}
+        <div className="flex flex-col justify-between text-[9px] text-muted-foreground pr-1 pb-4">
+          <span>{maxPlayed}</span>
+          <span>{Math.round(maxPlayed / 2)}</span>
+          <span>0</span>
+        </div>
 
-          return (
-            <div key={rank} className="flex-1 flex flex-col items-center gap-0.5">
-              <motion.div
-                className="w-full rounded-t"
-                initial={{ height: 0 }}
-                animate={{ height: maxPlayed > 0 ? `${(played / maxPlayed) * 100}%` : "0%" }}
-                transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                style={{
-                  backgroundColor:
-                    pct > 75
-                      ? "#ef4444"
-                      : pct > 50
-                      ? "#eab308"
-                      : "#22c55e",
-                  minHeight: played > 0 ? "2px" : "0px",
-                }}
-              />
-              <span className="text-[9px] text-muted-foreground leading-none">
-                {rank}
-              </span>
-            </div>
-          );
-        })}
+        {/* Bars */}
+        <div className="flex-1 flex items-end gap-1">
+          {RANKS.map((rank) => {
+            const played = playedRanks[rank] || 0;
+            const ratio = played / maxPlayed;
+            const fillPct = (played / TOTAL_PER_RANK) * 100;
+
+            return (
+              <div key={rank} className="flex-1 flex flex-col items-center gap-0.5">
+                <motion.div
+                  className="w-full rounded-t"
+                  initial={{ height: 0 }}
+                  animate={{ height: `${ratio * 100}%` }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                  style={{
+                    backgroundColor:
+                      fillPct > 75
+                        ? "#ef4444"
+                        : fillPct > 50
+                        ? "#eab308"
+                        : "#22c55e",
+                    minHeight: played > 0 ? "2px" : "0px",
+                  }}
+                />
+                <span className="text-[9px] text-muted-foreground leading-none">
+                  {rank}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
         {RANKS.map((rank) => (
