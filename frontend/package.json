@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:all": "concurrently -n back,front -c blue,green \"cd ../backend && python3 main.py\" \"next dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -30,6 +31,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.186.0",
+    "concurrently": "^10.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
