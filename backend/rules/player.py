@@ -33,7 +33,10 @@ class Player(ABC):
         return self.balance >= MIN_BET
 
     def place_bet(self, amount: int) -> int:
-        amount = max(MIN_BET, min(amount, self.balance))
+        if amount <= 0 or self.balance < MIN_BET:
+            amount = 0
+        else:
+            amount = min(amount, self.balance)
         self.balance -= amount
         self.current_bet = amount
         return amount

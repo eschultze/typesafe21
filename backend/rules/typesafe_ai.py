@@ -248,6 +248,8 @@ def get_ai_bet(
 
 
 def _score_to_bet(score: float, min_bet: int, balance: int, true_count: int = 0) -> int:
+    if balance < min_bet:
+        return 0
     bet_pcts = [0.05, 0.15, 0.25, 0.35, 0.50]
     idx = int(round(score))
     idx = max(0, min(idx, len(bet_pcts) - 1))
