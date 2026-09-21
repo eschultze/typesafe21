@@ -18,6 +18,15 @@ class GameManager:
     def remove(self, game_id: str):
         self.games.pop(game_id, None)
 
+    def get_history(self) -> list[dict]:
+        return db.get_all_sessions()
+
+    def get_session_stats(self, session_id: int) -> dict:
+        return db.get_session_stats(session_id)
+
+    def get_session_rounds(self, session_id: int) -> list[dict]:
+        return db.get_session_rounds(session_id)
+
 
 class GameSession:
     def __init__(self, game_id: str):
@@ -43,6 +52,8 @@ class GameSession:
         self.dealer_hand = Hand()
         for p in self.players:
             p.reset_session()
+            p.reset_hand()
+            p.current_bet = 0
         self.session_id = db.create_session()
         self.round_number = 0
         self.phase = "idle"
