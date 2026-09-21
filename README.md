@@ -1,8 +1,21 @@
 # Typesafe 21
 
-A terminal-based blackjack simulator where three players with different strategies compete head-to-head, powered by [TypeSafe System One](https://docs.typesafe.ai).
+AI-powered blackjack simulator where three players with different strategies compete head-to-head, powered by [TypeSafe System One](https://docs.typesafe.ai). Available as both a **terminal app** (Textual TUI) and a **web app** (Next.js + FastAPI).
+
+> **Note:** The terminal version is being sunset in favor of the web version. The web app provides the same gameplay with a richer UI, 3D visuals, animated cards, and session history. The terminal code remains in the repo for reference but is no longer actively maintained.
 
 ## Quick Start
+
+### Web (recommended)
+
+```bash
+cd typesafe21
+./dev.sh
+```
+
+Opens `http://localhost:3000` (frontend) and `http://localhost:8000` (backend). Press `Ctrl+C` to stop both.
+
+### Terminal
 
 ```bash
 cd typesafe21
@@ -43,12 +56,14 @@ The AI decides **autonomously** — no basic strategy hints or bias are sent. Ba
 - Starting balance: $100 per player
 - Minimum bet: $10
 
-## Game Modes
+## Game Modes (Web)
 
-- **New Game** — Start a fresh session
-- **Continue Previous Game** — Resume an incomplete session
-- **View History** — Browse past sessions and round details
-- **Auto-play** — Enter a number of rounds to play automatically (0.5s delay between rounds)
+- **New Game** — Start a fresh session with a new shoe
+- **Play Round** — Play a single round
+- **End Session** — Complete the current session (saved to history)
+- **Auto Play** — Play unlimited rounds automatically (500ms delay)
+- **+1 / +5 / +10 rounds** — Play a fixed number of rounds automatically
+- **History** — Browse completed sessions at `/history`
 
 ## AI Primitives Used
 
@@ -71,35 +86,82 @@ The AI uses balance-based percentages driven by its Score response:
 
 The AI's Score determines the bet aggressiveness. No hardcoded formula — the AI decides.
 
+## Configuration
+
+The web version reads these environment variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `BACKEND_URL` | `http://localhost:8000` | Backend API URL (used by Next.js rewrites) |
+| `NEXT_PUBLIC_WS_HOST` | `window.location.hostname` | WebSocket host for frontend |
+| `NEXT_PUBLIC_WS_PORT` | `8000` | WebSocket port for frontend |
+| `TYPESAFE_API_KEY` | — | TypeSafe API key |
+| `TYPESAFE_API_URL` | — | TypeSafe API endpoint |
+| `TYPESAFE_MODEL` | `jev-latest` | TypeSafe model |
+
 ## File Structure
 
 ```
 typesafe21/
-  main.py              # Entry point
-  game.py              # Round logic, dealing, payouts, split handling
-  player.py            # Player classes (Random, BasicStrategy, AI)
-  typesafe_ai.py       # TypeSafe API integration (Choice + Score)
-  basic_strategy.py    # Basic strategy lookup (displayed for reference)
-  cards.py             # Card, Hand, Deck, TrackedDeck
-  database.py          # SQLite persistence
-  cash_register.mp3    # Sound effect on AI win
-  requirements.txt     # Dependencies
-  game_history.db      # Created at runtime
-  ui/
-    app.py             # Textual app, screen routing
-    styles.tss         # Textual CSS
+  dev.sh                 # Start frontend + backend (Ctrl+C to stop)
+  main.py                # Terminal entry point
+  game.py                # Round logic, dealing, payouts, split handling
+  player.py              # Player classes (Random, BasicStrategy, AI)
+  typesafe_ai.py         # TypeSafe API integration (Choice + Score)
+  basic_strategy.py      # Basic strategy lookup (displayed for reference)
+  cards.py               # Card, Hand, Deck, TrackedDeck
+  database.py            # SQLite persistence
+  cash_register.mp3      # Sound effect on AI win
+  requirements.txt       # Terminal dependencies
+  .env                   # API keys (gitignored)
+  game_history.db        # Created at runtime
+
+  backend/               # FastAPI + WebSocket backend
+    main.py              # FastAPI app, WebSocket endpoint, REST API
+    game_manager.py      # GameSession wrapping game logic for web
+    connection_manager.py # WebSocket broadcast manager
+    models.py            # Pydantic models (GameState, PlayerState, etc.)
+    database.py          # SQLite persistence (same schema as root)
+    rules/               # Game logic ported from root with to_dict()
+      cards.py
+      player.py
+      game.py
+      basic_strategy.py
+      typesafe_ai.py
+
+  frontend/              # Next.js 19 + React + Three.js
+    src/
+      app/
+        page.tsx         # Landing page
+        game/page.tsx    # Main game board
+        history/page.tsx # Session history browser
+      stores/
+        gameStore.ts     # Zustand state (game state, WebSocket, animations)
+      hooks/
+        useGameSocket.ts # WebSocket hook with reconnection
+      components/
+        game/            # PlayingCard, PlayerHand, DealerHand, Scoreboard,
+                         # GameControls, BalanceChart, ShoeIndicator,
+                         # CardTracker, StatsPanel, LastAction, WinSound,
+                         # HeroScene, ChipScene
+        ui/              # shadcn/ui components (button, badge, card, etc.)
+      components3d/      # Three.js scenes (ChipStack3D, CardShuffle)
+
+  ui/                    # Terminal UI (Textual)
+    app.py               # Textual app, screen routing
+    styles.tss           # Textual CSS
     screens/
-      game.py          # Main game screen with state machine
-      menu.py          # Menu screen
-      summary.py       # Session summary
-      history.py       # Session history (modal)
+      game.py            # Main game screen with state machine
+      menu.py            # Menu screen
+      summary.py         # Session summary
+      history.py         # Session history (modal)
     widgets/
-      card_art.py      # ASCII card rendering (5-line box art)
-      dealer_panel.py  # Dealer hand display
-      players_panel.py # Player hands with card art + loading spinner
+      card_art.py        # ASCII card rendering (5-line box art)
+      dealer_panel.py    # Dealer hand display
+      players_panel.py   # Player hands with card art + loading spinner
       scoreboard_panel.py # Balances, W/L, win rate
-      deck_panel.py    # Deck remaining, true count, running count
-      balance_chart.py # Custom bar chart with Y-axis labels
+      deck_panel.py      # Deck remaining, true count, running count
+      balance_chart.py   # Custom bar chart with Y-axis labels
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed design.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed design and [WEB.md](WEB.md) for web-specific details.

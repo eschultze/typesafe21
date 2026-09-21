@@ -23,19 +23,19 @@ export function StatsPanel() {
   const totalRounds = aiBetHistory.length;
 
   return (
-    <div className="flex flex-col p-3 rounded-lg bg-white/5 border border-white/10">
+    <div className="flex flex-col p-3 rounded-[10px] bg-card border border-border">
       <span className="text-xs text-muted-foreground mb-2">AI Statistics</span>
       <div className="grid grid-cols-3 gap-4 text-center">
         <div className="flex flex-col">
-          <span className="text-2xl font-bold">${avgBet}</span>
+          <span className="text-2xl font-bold tabular-nums">${avgBet}</span>
           <span className="text-xs text-muted-foreground">Avg Bet</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-2xl font-bold">{avgConfidence}%</span>
+          <span className="text-2xl font-bold tabular-nums">{avgConfidence}%</span>
           <span className="text-xs text-muted-foreground">Avg Confidence</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-2xl font-bold">{totalRounds}</span>
+          <span className="text-2xl font-bold tabular-nums">{totalRounds}</span>
           <span className="text-xs text-muted-foreground">Rounds</span>
         </div>
       </div>

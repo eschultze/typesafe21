@@ -1,6 +1,10 @@
 # Architecture — Typesafe 21
 
+> **Note:** The terminal version is being sunset in favor of the web version. The architecture below covers both for reference, but active development targets the web app.
+
 ## System Overview
+
+### Terminal (sunset)
 
 ```
 main.py  ──>  ui/app.py  ──>  ui/screens/game.py  ──>  game.py  ──>  typesafe_ai.py  ──>  TypeSafe API
@@ -12,14 +16,23 @@ main.py  ──>  ui/app.py  ──>  ui/screens/game.py  ──>  game.py  ─�
                                                           (BasicStrategyPlayer)
 ```
 
-The game enforces a strict separation: **game mechanics** (dealing, comparing hands, payouts) stay local. **Player decisions** (what to bet, hit or stand) are delegated to each player's strategy. The AI makes every decision autonomously with zero local fallback logic.
+### Web (active)
 
-## Module Responsibilities
+```
+Browser (Next.js)                Backend (FastAPI)              TypeSafe API
+┌─────────────────┐             ┌──────────────────┐           ┌──────────┐
+│  React + Zustand │◄─WebSocket─┤  game_manager.py  │───────────┤  Choice  │
+│  Tailwind + 3D   │             │  rules/           │           │  Score   │
+│  shadcn/ui       │◄──REST─────┤  database.py      │           └──────────┘
+└─────────────────┘             └──────────────────┘
+      :3000                           :8000
+```
 
-### `main.py` — Entry Point
+The web version ports the existing Python game logic to a FastAPI backend with WebSocket real-time updates. The frontend is a Next.js SPA with Zustand state management, Motion animations, and Three.js 3D scenes.
 
-- Launches the Textual app (`TypesafeApp`)
-- Minimal setup code
+## Core Game Logic
+
+These modules are shared between terminal and web (the web version ports them to `backend/rules/`).
 
 ### `game.py` — Game Mechanics
 
@@ -120,51 +133,90 @@ player_rounds (
 
 Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_last_incomplete_session`, `get_round_count`, `get_session_stats`, `get_all_sessions`, `get_session_rounds`, `clear_database`
 
-## UI Widgets
+## Web Backend
 
-- `DealerPanel` — Dealer hand with card art, hides first card until dealer's turn
-- `PlayersPanel` — Player hands with card art, win/lose indicators, AI decision display, loading spinner
-- `ScoreboardPanel` — Balances, W/L records, win rates
-- `DeckPanel` — Cards remaining, true count, running count, shoe penetration
-- `BalanceChartPanel` — Custom bar chart with Y-axis labels showing AI balance over time
-  - Green bars = above starting balance, Red bars = below
-  - Y-axis labels show dollar values
-  - Grows one bar per round
+### `backend/main.py` — FastAPI App
 
-## Data Flow: One Round
+- REST endpoints: `GET /api/health`, `GET /api/history`, `GET /api/history/{id}`
+- WebSocket endpoint: `/ws/{game_id}`
+- Actions handled via WebSocket JSON messages:
+  - `new_game` — Reset deck, players, start fresh session
+  - `play_round` — Play one complete round (bet, deal, player turns, dealer, settle)
+  - `auto_play` — Start/stop auto-play loop with configurable delay and round limit
+  - `end_session` — Mark session complete, start new game
+  - `get_state` — Request current state
+
+### `backend/game_manager.py` — Game Session Manager
+
+- `GameManager` — Pool of `GameSession` instances by game ID
+- `GameSession` — Wraps game logic for web: converts state to Pydantic models, manages auto-play loop
+- Delegates history/stats to `database.py`
+
+### `backend/models.py` — Pydantic Models
+
+- `GameState` — Full game state (phase, players, dealer, shoe, last_action, etc.)
+- `PlayerState` — Per-player state (name, balance, hand, wins/losses/pushes)
+- `HandModel` — Hand with cards, value, soft/bust/blackjack flags
+- `ShoeState` — Shoe state (remaining, counts, played_ranks)
+- `BetResult`, `HandResult`, `RoundResultModel` — Round result models
+
+### `backend/connection_manager.py` — WebSocket Manager
+
+- `ConnectionManager` — Tracks WebSocket connections per game ID
+- `broadcast()` — Sends messages to all connected clients in a game
+
+## Web Frontend
+
+### State Management — `gameStore.ts` (Zustand)
+
+- `GameState` — Mirror of backend state (phase, players, dealer, shoe)
+- `ai_bet_history` / `ai_confidence_history` — Tracked across rounds for StatsPanel
+- `prev_bets` — Used to detect bet changes and trigger chip animations
+- `chipsAnimating` — Animation flag
+- WebSocket integration via `sendAction()` and `updateState()`
+
+### Key Components
+
+- `PlayingCard` — Animated card with spring physics (Motion), suit-colored text
+- `PlayerHand` — Player hand panel with cards, badges (BJ/bust), active glow
+- `DealerHand` — Dealer hand with card hiding until reveal phase
+- `GameControls` — New Game, Play Round, End Session, Auto Play buttons
+- `Scoreboard` — Player balances with animated profit indicators
+- `ShoeIndicator` — Progress bar showing shoe depletion + true count badge
+- `BalanceChart` — SVG line chart of AI balance over time
+- `CardTracker` — Bar chart showing card composition by rank
+- `StatsPanel` — AI average bet, confidence, round count
+- `LastAction` — Displays previous round's results with win/lose/push badges
+- `WinSound` — Plays cash register sound on AI win
+- `HeroScene` / `ChipScene` — Three.js 3D scenes
+
+### WebSocket Hook — `useGameSocket.ts`
+
+- Connects to backend WebSocket with exponential backoff reconnection
+- Configurable host/port via `NEXT_PUBLIC_WS_HOST` / `NEXT_PUBLIC_WS_PORT`
+- Dispatches `state_update` messages to Zustand store
+
+## Data Flow: One Round (Web)
 
 ```
-1. do_bets()
+1. Frontend sends { action: "play_round" } via WebSocket
+2. Backend: do_bets()
    ├── AI calls get_ai_bet() → Score 0-4 → mapped to balance-based percentage
    ├── BasicStrategyPlayer bets minimum
    ├── RandomPlayer picks random flat bet
    └── Bets deducted from balances
-
-2. deal_initial()
+3. Backend: deal_initial()
    ├── Deal one shared hand (2 cards) → copy to all players
    └── Deal dealer's own hand (2 cards)
-
-3. For each player:
-   └── play_player_hand()
-       ├── AI calls get_ai_decision() → hit/stand/double/split
-       ├── BasicStrategy follows lookup table
-       ├── Random picks randomly
-       ├── Hit: deal card, loop again
-       ├── Double: double bet, deal one card, break
-       ├── Split: create two hands, play each independently
-       └── Stand: break
-
-4. play_dealer()
-   └── Dealer hits until >= 17
-
-5. settle_round()
-   ├── determine_winner() for each player/hand
-   ├── Win: balance += bet + bet * multiplier
-   ├── Push: balance += bet (returned)
-   └── Lose: bet already deducted
-
-6. save_round() to database
-7. Update balance chart
+4. Backend: For each player: play_player_hand()
+   ├── AI calls get_ai_decision() → hit/stand/double/split
+   ├── BasicStrategy follows lookup table
+   └── Random picks randomly
+5. Backend: play_dealer() — Dealer hits until >= 17
+6. Backend: settle_round() — Win/lose/push for each player
+7. Backend: save_round() to database
+8. Backend: Broadcast full state to all WebSocket clients
+9. Frontend: Zustand store updates → React re-renders
 ```
 
 ## Key Design Decisions
@@ -180,3 +232,7 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 5. **Rich state** — AI sees shoe composition, opponent balances, and session performance.
 
 6. **No fallbacks** — If the API is down, the game stops. This forces the AI to actually play rather than silently reverting to local rules.
+
+7. **Shared game logic** — The `backend/rules/` directory mirrors root game modules with `to_dict()` serialization, keeping terminal and web independent.
+
+8. **Real-time updates** — WebSocket broadcasts full game state after every phase, enabling smooth animations and live updates.

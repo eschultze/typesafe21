@@ -9,7 +9,7 @@ export function Scoreboard() {
   if (players.length === 0) return null;
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 w-full">
       {players.map((p) => {
         const startingBalance = p.balance_history[0] ?? 100;
         const profit = p.balance - startingBalance;
@@ -17,20 +17,21 @@ export function Scoreboard() {
           <motion.div
             key={p.name}
             layout
-            className="flex flex-col items-center p-3 rounded-lg bg-white/5 border border-white/10 min-w-[100px]"
+            className="flex flex-col items-center p-3 rounded-[10px] bg-card border border-border min-w-[100px] flex-1"
           >
             <span className="text-xs text-muted-foreground mb-1">{p.name}</span>
             <motion.span
               key={p.balance}
               initial={{ scale: 1.2 }}
               animate={{ scale: 1 }}
-              className={`text-xl font-bold ${
-                profit > 0 ? "text-green-400" : profit < 0 ? "text-red-400" : "text-white"
+              transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
+              className={`text-xl font-bold tabular-nums ${
+                profit > 0 ? "text-[var(--color-profit)]" : profit < 0 ? "text-[var(--color-loss)]" : "text-foreground"
               }`}
             >
               ${p.balance}
             </motion.span>
-            <span className={`text-xs ${profit >= 0 ? "text-green-500" : "text-red-500"}`}>
+            <span className={`text-xs tabular-nums ${profit >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
               {profit >= 0 ? "+" : ""}{profit}
             </span>
           </motion.div>

@@ -9,7 +9,7 @@ export function LastAction() {
 
   if (!lastAction || lastAction.type !== "round_result") return null;
 
-  const { bets, result } = lastAction;
+  const { result } = lastAction;
 
   return (
     <AnimatePresence>
@@ -17,7 +17,8 @@ export function LastAction() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="w-full p-4 rounded-xl bg-white/5 border border-white/10"
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full p-4 rounded-[10px] bg-card border border-border"
       >
         <div className="text-xs text-muted-foreground mb-2">Round Result</div>
         <div className="flex flex-wrap gap-2">
@@ -26,7 +27,7 @@ export function LastAction() {
               key={i}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.1, duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
               className="flex items-center gap-2"
             >
               <Badge
@@ -39,7 +40,7 @@ export function LastAction() {
                 }
                 className={
                   h.result === "win"
-                    ? "bg-green-600"
+                    ? "bg-[var(--color-profit)]"
                     : h.result === "push"
                     ? "bg-yellow-600"
                     : ""
@@ -48,7 +49,7 @@ export function LastAction() {
                 {h.name}: {h.result?.toUpperCase()}
               </Badge>
               {h.is_ai && h.decision && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground tabular-nums">
                   ({h.decision}, conf: {(h.confidence * 100).toFixed(0)}%)
                 </span>
               )}

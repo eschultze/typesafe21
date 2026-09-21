@@ -32,25 +32,27 @@ export function BalanceChart() {
   const startingBalance = history[0] ?? 100;
   const profit = aiPlayer.balance - startingBalance;
 
+  const strokeColor = profit >= 0 ? "var(--color-profit)" : "var(--color-loss)";
+
   return (
-    <div className="flex flex-col items-center p-3 rounded-lg bg-white/5 border border-white/10">
+    <div className="flex flex-col items-center p-3 rounded-[10px] bg-card border border-border">
       <span className="text-xs text-muted-foreground mb-1">AI Balance</span>
       <svg width={width} height={height} className="overflow-visible">
         <defs>
           <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={profit >= 0 ? "#22c55e" : "#ef4444"} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={profit >= 0 ? "#22c55e" : "#ef4444"} stopOpacity="0" />
+            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
           </linearGradient>
         </defs>
         <path d={areaD} fill="url(#chartGrad)" />
         <motion.path
           d={pathD}
           fill="none"
-          stroke={profit >= 0 ? "#22c55e" : "#ef4444"}
+          stroke={strokeColor}
           strokeWidth="2"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         />
         {/* Baseline at starting balance */}
         <line
@@ -58,8 +60,8 @@ export function BalanceChart() {
           y1={padding + (1 - (startingBalance - minVal) / range) * (height - padding * 2)}
           x2={width - padding}
           y2={padding + (1 - (startingBalance - minVal) / range) * (height - padding * 2)}
-          stroke="white"
-          strokeOpacity="0.2"
+          stroke="var(--color-muted-foreground)"
+          strokeOpacity="0.3"
           strokeDasharray="4 4"
         />
       </svg>

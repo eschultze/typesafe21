@@ -18,10 +18,10 @@ export function GameControls() {
           {connected ? "Connected" : "Disconnected"}
         </Badge>
         {round_number > 0 && (
-          <Badge variant="secondary">Round {round_number}</Badge>
+          <Badge variant="secondary" className="tabular-nums">Round {round_number}</Badge>
         )}
         {auto_play && (
-          <Badge className="bg-blue-600">Auto-Playing</Badge>
+          <Badge className="bg-accent text-accent-foreground">Auto-Playing</Badge>
         )}
       </div>
 
@@ -37,7 +37,7 @@ export function GameControls() {
         <Button
           onClick={() => sendAction("play_round")}
           disabled={!connected || !isIdle}
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-accent text-accent-foreground hover:bg-accent/90 active:scale-[0.98] transition-all duration-[var(--dur-micro)]"
         >
           Play Round
         </Button>
@@ -77,6 +77,7 @@ export function GameControls() {
           }
           disabled={!connected}
           variant={auto_play ? "destructive" : "default"}
+          className={auto_play ? "" : "active:scale-[0.98] transition-all duration-[var(--dur-micro)]"}
         >
           {auto_play ? "Stop Auto" : "Auto Play"}
         </Button>

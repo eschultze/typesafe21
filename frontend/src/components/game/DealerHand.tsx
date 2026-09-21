@@ -24,7 +24,8 @@ export function DealerHand() {
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-lg font-bold"
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="text-lg font-bold tabular-nums"
           >
             {dealer.value}
           </motion.span>

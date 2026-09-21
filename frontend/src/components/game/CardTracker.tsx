@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { useGameStore } from "@/stores/gameStore";
 
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-const TOTAL_PER_RANK = 24; // 6 decks × 4 suits
+const TOTAL_PER_RANK = 24; // 6 decks x 4 suits
 
 export function CardTracker() {
   const playedRanks = useGameStore((s) => s.state.shoe.played_ranks) || {};
@@ -13,11 +13,11 @@ export function CardTracker() {
   const maxPlayed = Math.max(...counts, 1);
 
   return (
-    <div className="flex flex-col p-3 rounded-lg bg-white/5 border border-white/10">
+    <div className="flex flex-col p-3 rounded-[10px] bg-card border border-border">
       <span className="text-xs text-muted-foreground mb-2">Cards Observed</span>
       <div className="flex gap-1 h-28">
         {/* Y-axis labels */}
-        <div className="flex flex-col justify-between text-[9px] text-muted-foreground pr-1 pb-4">
+        <div className="flex flex-col justify-between text-[9px] text-muted-foreground pr-1 pb-4 tabular-nums">
           <span>{maxPlayed}</span>
           <span>{Math.floor(maxPlayed / 2)}</span>
           <span>0</span>
@@ -40,10 +40,10 @@ export function CardTracker() {
                   style={{
                     backgroundColor:
                       fillPct > 75
-                        ? "#ef4444"
+                        ? "var(--color-loss)"
                         : fillPct > 50
-                        ? "#eab308"
-                        : "#22c55e",
+                        ? "var(--chart-4)"
+                        : "var(--color-profit)",
                     minHeight: played > 0 ? "2px" : "0px",
                   }}
                 />
@@ -55,7 +55,7 @@ export function CardTracker() {
           })}
         </div>
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground tabular-nums">
         {RANKS.map((rank) => (
           <span key={rank}>
             {rank}: {playedRanks[rank] || 0}/{TOTAL_PER_RANK}

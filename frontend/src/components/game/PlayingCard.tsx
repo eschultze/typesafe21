@@ -4,10 +4,10 @@ import { motion } from "motion/react";
 import { CardData } from "@/stores/gameStore";
 
 const suitColors: Record<string, string> = {
-  "♥": "text-red-500",
-  "♦": "text-red-500",
-  "♣": "text-gray-900",
-  "♠": "text-gray-900",
+  "♥": "text-red-400",
+  "♦": "text-red-400",
+  "♣": "text-foreground",
+  "♠": "text-foreground",
 };
 
 interface PlayingCardProps {
@@ -25,7 +25,7 @@ export function PlayingCard({ card, hidden = false, index = 0, size = "md" }: Pl
   }[size];
 
   const isHidden = hidden || card.rank === "?";
-  const textColor = suitColors[card.suit] || "text-gray-900";
+  const textColor = suitColors[card.suit] || "text-foreground";
 
   return (
     <motion.div
@@ -39,13 +39,13 @@ export function PlayingCard({ card, hidden = false, index = 0, size = "md" }: Pl
       }}
       className={`${dims} relative select-none rounded-lg border-2 shadow-lg overflow-hidden ${
         isHidden
-          ? "border-gray-600 bg-gradient-to-br from-blue-800 to-blue-950"
-          : "border-gray-300 bg-white"
+          ? "border-border bg-[var(--color-card-back)]"
+          : "border-border bg-[var(--color-card-face)]"
       }`}
     >
       {isHidden ? (
         <div className="w-full h-full flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-blue-400 rounded-full opacity-50" />
+          <div className="w-8 h-8 border-2 border-accent/30 rounded-full opacity-50" />
         </div>
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-between p-0.5">

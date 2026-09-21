@@ -23,72 +23,67 @@ export default function GameBoard() {
   const players = useGameStore((s) => s.state.players);
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-4 md:p-8 gap-6">
+    <main className="min-h-screen flex flex-col p-4 md:px-8 md:py-6 gap-6 max-w-[76rem] mx-auto w-full">
       <WinSound />
-      <motion.h1
+
+      {/* ─── Header ─── */}
+      <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-3xl font-bold tracking-tight"
+        className="flex items-center justify-between"
       >
-        TypeSafe<span className="text-green-500">21</span>
-      </motion.h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          Typesafe<span className="text-accent">21</span>
+        </h1>
+        {phase !== "idle" && (
+          <span className="text-xs font-mono text-muted-foreground tabular-nums">
+            {phase}
+          </span>
+        )}
+      </motion.header>
 
+      {/* ─── Hero Scene (shows on round 0) ─── */}
       <HeroScene />
 
-      <div className="w-full max-w-4xl flex flex-col items-center gap-6">
-        {/* Dealer */}
+      {/* ─── Dealer ─── */}
+      <section className="flex flex-col items-center gap-4">
         <DealerHand />
+      </section>
 
-        {/* Table divider */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      {/* ─── Divider ─── */}
+      <div className="w-full h-px bg-border" />
 
-        {/* Players */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-          {players.map((p, i) => (
-            <PlayerHand key={p.name} playerIndex={i} />
-          ))}
-        </div>
+      {/* ─── Players — varied widths ─── */}
+      <section className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr_0.8fr] gap-4 w-full">
+        {players.map((_p, i) => (
+          <PlayerHand key={i} playerIndex={i} />
+        ))}
+      </section>
 
-        {/* Chip stacks */}
-        <ChipScene />
+      {/* ─── Chip Stacks ─── */}
+      <ChipScene />
 
-        {/* Table divider */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      {/* ─── Divider ─── */}
+      <div className="w-full h-px bg-border" />
 
-        {/* Last action */}
-        <LastAction />
+      {/* ─── Last Action ─── */}
+      <LastAction />
 
-        {/* Scoreboard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-          <Scoreboard />
-        </div>
+      {/* ─── Scoreboard ─── */}
+      <Scoreboard />
 
-        {/* Shoe + Balance + Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-          <ShoeIndicator />
-          <BalanceChart />
-          <StatsPanel />
-        </div>
+      {/* ─── Stats Row — shoe + chart + stats ─── */}
+      <section className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr_1fr] gap-4 w-full">
+        <ShoeIndicator />
+        <BalanceChart />
+        <StatsPanel />
+      </section>
 
-        {/* Card tracker */}
-        <div className="w-full">
-          <CardTracker />
-        </div>
+      {/* ─── Card Tracker ─── */}
+      <CardTracker />
 
-        {/* Controls */}
-        <GameControls />
-
-        {/* Phase indicator */}
-        {phase !== "idle" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-sm text-muted-foreground"
-          >
-            Phase: <span className="font-mono text-foreground">{phase}</span>
-          </motion.div>
-        )}
-      </div>
+      {/* ─── Controls ─── */}
+      <GameControls />
     </main>
   );
 }

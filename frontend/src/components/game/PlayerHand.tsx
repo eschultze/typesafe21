@@ -25,16 +25,16 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
   return (
     <motion.div
       layout
-      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all duration-300 ${
+      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all duration-[var(--dur-short)] ${
         isActive
-          ? "border-green-500/60 bg-green-950/30 shadow-[0_0_20px_rgba(34,197,94,0.15)]"
-          : "border-white/10 bg-white/5"
+          ? "border-accent/50 bg-accent/5 shadow-[0_0_20px_var(--color-active-glow)]"
+          : "border-border bg-card"
       }`}
     >
       <div className="flex items-center gap-2">
         <Badge
           variant={isHuman ? "default" : "secondary"}
-          className={isHuman ? "bg-green-600" : ""}
+          className={isHuman ? "bg-accent text-accent-foreground" : ""}
         >
           {player.name}
         </Badge>
@@ -48,7 +48,8 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
           key={hand.value}
           initial={{ scale: 1.3 }}
           animate={{ scale: 1 }}
-          className="text-lg font-bold"
+          transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          className="text-lg font-bold tabular-nums"
         >
           {hand.value}
         </motion.span>
@@ -68,9 +69,9 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
       </div>
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span>Bet: <span className="font-bold text-foreground">${player.current_bet}</span></span>
-        <span>Balance: <span className={`font-bold ${player.balance >= 100 ? "text-green-400" : "text-red-400"}`}>${player.balance}</span></span>
-        <span>{player.wins}W / {player.losses}L / {player.pushes}P</span>
+        <span>Bet: <span className="font-bold text-foreground tabular-nums">${player.current_bet}</span></span>
+        <span>Balance: <span className={`font-bold tabular-nums ${player.balance >= 100 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>${player.balance}</span></span>
+        <span className="tabular-nums">{player.wins}W / {player.losses}L / {player.pushes}P</span>
       </div>
     </motion.div>
   );
