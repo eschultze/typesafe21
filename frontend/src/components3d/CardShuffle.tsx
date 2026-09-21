@@ -1,65 +1,86 @@
 "use client";
 
-import { Canvas, useFrame } from "@react-three/fiber";
-import { useRef } from "react";
-import * as THREE from "three";
+import { motion, AnimatePresence } from "motion/react";
+import { PlayingCard } from "@/components/game/PlayingCard";
+import { CardData } from "@/stores/gameStore";
+import { useState, useEffect } from "react";
 
-const CARD_COLORS = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#ec4899"];
-const TOTAL_CARDS = 12;
-const CYCLE = 3.0;
+const SAMPLE_CARDS: CardData[] = [
+  { rank: "A", suit: "♠", value: 11 },
+  { rank: "7", suit: "♥", value: 7 },
+  { rank: "K", suit: "♦", value: 10 },
+  { rank: "3", suit: "♣", value: 3 },
+  { rank: "J", suit: "♥", value: 10 },
+  { rank: "5", suit: "♠", value: 5 },
+  { rank: "Q", suit: "♦", value: 10 },
+  { rank: "9", suit: "♣", value: 9 },
+  { rank: "2", suit: "♥", value: 2 },
+  { rank: "8", suit: "♠", value: 8 },
+  { rank: "10", suit: "♦", value: 10 },
+  { rank: "4", suit: "♣", value: 4 },
+];
 
-function Card({ index }: { index: number }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const color = CARD_COLORS[index % CARD_COLORS.length];
-  const stagger = index * 0.03;
-
-  useFrame((state) => {
-    if (!groupRef.current) return;
-
-    const elapsed = state.clock.elapsedTime;
-    const t = ((elapsed + stagger) % CYCLE) / CYCLE;
-
-    const appearEnd = 0.12;
-    const holdEnd = 0.45;
-    const disappearEnd = 0.55;
-
-    let scale: number;
-    if (t < appearEnd) {
-      scale = THREE.MathUtils.smoothstep(t / appearEnd, 0, 1);
-    } else if (t < holdEnd) {
-      scale = 1;
-    } else if (t < disappearEnd) {
-      scale = 1 - THREE.MathUtils.smoothstep((t - holdEnd) / (disappearEnd - holdEnd), 0, 1);
-    } else {
-      scale = 0;
-    }
-
-    groupRef.current.scale.setScalar(Math.max(0.001, scale));
-  });
-
-  const xPos = (index - TOTAL_CARDS / 2) * 0.35;
-  const rotZ = (index - TOTAL_CARDS / 2) * 0.06;
-
-  return (
-    <group ref={groupRef} position={[xPos, 0, 0]} rotation={[0, 0, rotZ]}>
-      <mesh position={[0, 0, 0.005]}>
-        <planeGeometry args={[0.55, 0.78]} />
-        <meshBasicMaterial color="white" />
-      </mesh>
-      <mesh position={[0, 0, -0.005]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[0.55, 0.78]} />
-        <meshBasicMaterial color={color} />
-      </mesh>
-    </group>
-  );
-}
+const VISIBLE_CARDS = 7;
+const CYCLE_MS = 3000;
 
 export function CardShuffle() {
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setOffset((prev) => (prev + 1) % SAMPLE_CARDS.length);
+    }, CYCLE_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  const visibleCards = Array.from({ length: VISIBLE_CARDS }, (_, i) => {
+    const cardIndex = (offset + i) % SAMPLE_CARDS.length;
+    return { card: SAMPLE_CARDS[cardIndex], i };
+  });
+
   return (
-    <Canvas camera={{ position: [0, 0, 3.5], fov: 40 }}>
-      {Array.from({ length: TOTAL_CARDS }, (_, i) => (
-        <Card key={i} index={i} />
-      ))}
-    </Canvas>
+    <div className="w-full h-full flex items-center justify-center overflow-hidden">
+      <div className="relative" style={{ width: VISIBLE_CARDS * 48, height: 120 }}>
+        <AnimatePresence mode="popLayout">
+          {visibleCards.map(({ card, i }) => {
+            const centerIndex = Math.floor(VISIBLE_CARDS / 2);
+            const distFromCenter = i - centerIndex;
+            const xOffset = distFromCenter * 48;
+            const rotation = distFromCenter * 4;
+            const scale = 1 - Math.abs(distFromCenter) * 0.06;
+            const zIndex = VISIBLE_CARDS - Math.abs(distFromCenter);
+            const opacity = 1 - Math.abs(distFromCenter) * 0.12;
+
+            return (
+              <motion.div
+                key={`${card.rank}-${card.suit}-${offset}-${i}`}
+                initial={{ opacity: 0, x: 200, rotateZ: 20, scale: 0.5 }}
+                animate={{
+                  opacity,
+                  x: xOffset,
+                  rotateZ: rotation,
+                  scale,
+                  y: 0,
+                }}
+                exit={{ opacity: 0, x: -200, rotateZ: -20, scale: 0.5 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 25,
+                  delay: i * 0.04,
+                }}
+                className="absolute top-0 left-1/2"
+                style={{
+                  marginLeft: -28,
+                  zIndex,
+                }}
+              >
+                <PlayingCard card={card} index={i} size="md" />
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
