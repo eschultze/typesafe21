@@ -8,7 +8,7 @@ const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
 const TOTAL_PER_RANK = 24; // 6 decks × 4 suits
 
 export function CardTracker() {
-  const playedRanks = useGameStore((s) => s.state.shoe.played_ranks);
+  const playedRanks = useGameStore((s) => s.state.shoe.played_ranks) || {};
 
   const maxPlayed = Math.max(...RANKS.map((r) => playedRanks[r] || 0), 1);
 
@@ -26,7 +26,7 @@ export function CardTracker() {
               <motion.div
                 className="w-full rounded-t"
                 initial={{ height: 0 }}
-                animate={{ height: `${(played / maxPlayed) * 100}%` }}
+                animate={{ height: maxPlayed > 0 ? `${(played / maxPlayed) * 100}%` : "0%" }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
                 style={{
                   backgroundColor:
