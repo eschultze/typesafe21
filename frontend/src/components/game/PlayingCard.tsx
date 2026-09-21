@@ -4,10 +4,10 @@ import { motion } from "motion/react";
 import { CardData } from "@/stores/gameStore";
 
 const suitColors: Record<string, string> = {
-  "♥": "text-red-400",
-  "♦": "text-red-400",
-  "♣": "text-foreground",
-  "♠": "text-foreground",
+  "♥": "text-red-500",
+  "♦": "text-red-500",
+  "♣": "text-gray-800",
+  "♠": "text-gray-800",
 };
 
 interface PlayingCardProps {
@@ -25,7 +25,7 @@ export function PlayingCard({ card, hidden = false, index = 0, size = "md" }: Pl
   }[size];
 
   const isHidden = hidden || card.rank === "?";
-  const textColor = suitColors[card.suit] || "text-foreground";
+  const suitColor = suitColors[card.suit] || "text-gray-800";
 
   return (
     <motion.div
@@ -49,13 +49,13 @@ export function PlayingCard({ card, hidden = false, index = 0, size = "md" }: Pl
         </div>
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-between p-0.5">
-          <span className={`font-bold self-start leading-none ${textColor}`}>
+          <span className={`font-bold self-start leading-none text-gray-800`}>
             {card.rank}
           </span>
-          <span className={`${size === "sm" ? "text-lg" : "text-xl"} ${textColor}`}>
+          <span className={`${size === "sm" ? "text-lg" : "text-xl"} ${suitColor}`}>
             {card.suit}
           </span>
-          <span className={`font-bold self-end leading-none rotate-180 ${textColor}`}>
+          <span className={`font-bold self-end leading-none rotate-180 text-gray-800`}>
             {card.rank}
           </span>
         </div>
