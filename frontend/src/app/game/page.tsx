@@ -13,6 +13,7 @@ import { HeroScene } from "@/components/game/HeroScene";
 import { WinSound } from "@/components/game/WinSound";
 import { StatsPanel } from "@/components/game/StatsPanel";
 import { CardTracker } from "@/components/game/CardTracker";
+import { ChipScene } from "@/components/game/ChipScene";
 import { motion } from "motion/react";
 
 export default function GameBoard() {
@@ -47,6 +48,9 @@ export default function GameBoard() {
             <PlayerHand key={i} playerIndex={i} />
           ))}
         </div>
+
+        {/* Chip stacks */}
+        <ChipScene />
 
         {/* Table divider */}
         <div className="w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />

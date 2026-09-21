@@ -56,6 +56,8 @@ interface GameStore {
   ws: WebSocket | null;
   ai_bet_history: number[];
   ai_confidence_history: number[];
+  prev_bets: number[];
+  chipsAnimating: boolean;
 
   setConnected: (connected: boolean) => void;
   setWebSocket: (ws: WebSocket | null) => void;
@@ -87,6 +89,8 @@ export const useGameStore = create<GameStore>()(
       ws: null,
       ai_bet_history: [],
       ai_confidence_history: [],
+      prev_bets: [],
+      chipsAnimating: false,
 
       setConnected: (connected) => set({ connected }),
       setWebSocket: (ws) => set({ ws }),
@@ -96,6 +100,28 @@ export const useGameStore = create<GameStore>()(
         const lastAction = state.last_action;
 
         const updates: Partial<GameStore> = { state };
+
+        // Detect bet changes → trigger chip animation
+        const newBets = state.players.map((p) => p.current_bet);
+        const oldBets = get().prev_bets;
+        const betsChanged =
+          oldBets.length === 0 ||
+          newBets.some((b, i) => b !== (oldBets[i] || 0));
+
+        if (betsChanged && state.phase !== "idle") {
+          updates.prev_bets = newBets;
+          updates.chipsAnimating = true;
+          setTimeout(() => {
+            get().chipsAnimating && set({ chipsAnimating: false });
+          }, state.auto_play ? 150 : 300);
+        }
+
+        // Reset chips when round ends
+        if (state.phase === "idle" && prev.phase !== "idle") {
+          updates.prev_bets = state.players.map(() => 0);
+          updates.chipsAnimating = true;
+          setTimeout(() => set({ chipsAnimating: false }), 200);
+        }
 
         if (
           lastAction?.type === "round_result" &&
