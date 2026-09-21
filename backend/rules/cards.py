@@ -187,6 +187,7 @@ class TrackedDeck:
             "running_count": self.running_count,
             "true_count": self.true_count,
             "penetration_pct": round((self.get_cards_since_reshuffle() / self.total_cards) * 100, 1),
+            "played_ranks": dict(self.played_ranks),
         }
 
     def __len__(self) -> int:

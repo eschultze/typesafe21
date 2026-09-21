@@ -11,6 +11,8 @@ import { GameControls } from "@/components/game/GameControls";
 import { LastAction } from "@/components/game/LastAction";
 import { HeroScene } from "@/components/game/HeroScene";
 import { WinSound } from "@/components/game/WinSound";
+import { StatsPanel } from "@/components/game/StatsPanel";
+import { CardTracker } from "@/components/game/CardTracker";
 import { motion } from "motion/react";
 
 export default function GameBoard() {
@@ -52,14 +54,21 @@ export default function GameBoard() {
         {/* Last action */}
         <LastAction />
 
-        {/* Info panels */}
+        {/* Scoreboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
           <Scoreboard />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+        {/* Shoe + Balance + Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
           <ShoeIndicator />
           <BalanceChart />
+          <StatsPanel />
+        </div>
+
+        {/* Card tracker */}
+        <div className="w-full">
+          <CardTracker />
         </div>
 
         {/* Controls */}

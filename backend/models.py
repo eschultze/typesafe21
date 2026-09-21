@@ -32,6 +32,7 @@ class ShoeState(BaseModel):
     running_count: int
     true_count: int
     penetration_pct: float
+    played_ranks: dict[str, int] = {}
 
 
 class GameState(BaseModel):

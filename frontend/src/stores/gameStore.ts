@@ -32,6 +32,7 @@ export interface ShoeData {
   running_count: number;
   true_count: number;
   penetration_pct: number;
+  played_ranks: Record<string, number>;
 }
 
 export interface GameState {
@@ -53,6 +54,8 @@ interface GameStore {
   game_id: string;
   state: GameState;
   ws: WebSocket | null;
+  ai_bet_history: number[];
+  ai_confidence_history: number[];
 
   setConnected: (connected: boolean) => void;
   setWebSocket: (ws: WebSocket | null) => void;
@@ -67,7 +70,7 @@ const defaultState: GameState = {
   players: [],
   dealer: null,
   dealer_hidden: true,
-  shoe: { remaining: 0, total: 312, running_count: 0, true_count: 0, penetration_pct: 0 },
+  shoe: { remaining: 0, total: 312, running_count: 0, true_count: 0, penetration_pct: 0, played_ranks: {} },
   current_player: null,
   last_action: null,
   session_id: null,
@@ -82,11 +85,37 @@ export const useGameStore = create<GameStore>()(
       game_id: "default",
       state: defaultState,
       ws: null,
+      ai_bet_history: [],
+      ai_confidence_history: [],
 
       setConnected: (connected) => set({ connected }),
       setWebSocket: (ws) => set({ ws }),
       setGameId: (id) => set({ game_id: id }),
-      updateState: (state) => set({ state }),
+      updateState: (state) => {
+        const prev = get().state;
+        const lastAction = state.last_action;
+
+        const updates: Partial<GameStore> = { state };
+
+        if (
+          lastAction?.type === "round_result" &&
+          state.round_number > prev.round_number
+        ) {
+          const result = lastAction.result;
+          const aiHand = result.hands?.find(
+            (h: any) => h.is_ai && h.name === "You"
+          );
+          if (aiHand) {
+            updates.ai_bet_history = [...get().ai_bet_history, aiHand.bet];
+            updates.ai_confidence_history = [
+              ...get().ai_confidence_history,
+              aiHand.confidence,
+            ];
+          }
+        }
+
+        set(updates);
+      },
       sendAction: (action, data = {}) => {
         const ws = get().ws;
         if (ws && ws.readyState === WebSocket.OPEN) {
