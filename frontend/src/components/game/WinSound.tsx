@@ -1,0 +1,29 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useGameStore } from "@/stores/gameStore";
+
+export function WinSound() {
+  const lastAction = useGameStore((s) => s.state.last_action);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio("/cash_register.mp3");
+  }, []);
+
+  useEffect(() => {
+    if (!lastAction || lastAction.type !== "round_result") return;
+
+    const { result } = lastAction;
+    const aiWon = result.hands?.some(
+      (h: any) => h.is_ai && h.result === "win"
+    );
+
+    if (aiWon && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [lastAction]);
+
+  return null;
+}

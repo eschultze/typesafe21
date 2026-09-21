@@ -11,6 +11,8 @@ export function DealerHand() {
   if (!dealer || dealer.cards.length === 0) return null;
 
   const showAll = !dealer_hidden || phase === "results" || phase === "dealer_turn";
+  const cardCount = dealer.cards.length;
+  const cardSize = cardCount <= 3 ? "lg" : "md";
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -34,7 +36,7 @@ export function DealerHand() {
           <Badge variant="destructive">Bust!</Badge>
         )}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 justify-center flex-wrap">
         <AnimatePresence mode="popLayout">
           {dealer.cards.map((card, i) => (
             <PlayingCard
@@ -42,7 +44,7 @@ export function DealerHand() {
               card={card}
               hidden={i === 1 && !showAll}
               index={i}
-              size="lg"
+              size={cardSize}
             />
           ))}
         </AnimatePresence>

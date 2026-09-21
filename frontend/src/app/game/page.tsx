@@ -10,6 +10,7 @@ import { BalanceChart } from "@/components/game/BalanceChart";
 import { GameControls } from "@/components/game/GameControls";
 import { LastAction } from "@/components/game/LastAction";
 import { HeroScene } from "@/components/game/HeroScene";
+import { WinSound } from "@/components/game/WinSound";
 import { motion } from "motion/react";
 
 export default function GameBoard() {
@@ -20,6 +21,7 @@ export default function GameBoard() {
 
   return (
     <main className="min-h-screen flex flex-col items-center p-4 md:p-8 gap-6">
+      <WinSound />
       <motion.h1
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

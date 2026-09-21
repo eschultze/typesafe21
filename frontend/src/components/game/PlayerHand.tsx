@@ -18,6 +18,9 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
   const isActive = state.current_player === player.name;
   const hand = player.hand;
   const isHuman = player.name === "You";
+  const cardCount = hand.cards.length;
+
+  const cardSize = cardCount <= 2 ? "md" : cardCount <= 4 ? "sm" : "sm";
 
   return (
     <motion.div
@@ -51,14 +54,14 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
         </motion.span>
       </div>
 
-      <div className="flex gap-1.5">
+      <div className="flex gap-1 justify-center flex-wrap">
         <AnimatePresence mode="popLayout">
           {hand.cards.map((card, i) => (
             <PlayingCard
               key={`${card.rank}-${card.suit}-${i}`}
               card={card}
               index={i}
-              size="md"
+              size={cardSize}
             />
           ))}
         </AnimatePresence>

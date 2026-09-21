@@ -19,9 +19,9 @@ interface PlayingCardProps {
 
 export function PlayingCard({ card, hidden = false, index = 0, size = "md" }: PlayingCardProps) {
   const dims = {
-    sm: "w-12 h-16 text-xs",
-    md: "w-16 h-[5.5rem] text-sm",
-    lg: "w-20 h-28 text-base",
+    sm: "w-10 h-14 text-[10px]",
+    md: "w-14 h-[4.5rem] text-xs",
+    lg: "w-16 h-[5.5rem] text-sm",
   }[size];
 
   const isHidden = hidden || card.rank === "?";
@@ -48,11 +48,11 @@ export function PlayingCard({ card, hidden = false, index = 0, size = "md" }: Pl
           <div className="w-8 h-8 border-2 border-blue-400 rounded-full opacity-50" />
         </div>
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-between p-1">
+        <div className="w-full h-full flex flex-col items-center justify-between p-0.5">
           <span className={`font-bold self-start leading-none ${textColor}`}>
             {card.rank}
           </span>
-          <span className={`text-2xl ${textColor}`}>
+          <span className={`${size === "sm" ? "text-lg" : "text-xl"} ${textColor}`}>
             {card.suit}
           </span>
           <span className={`font-bold self-end leading-none rotate-180 ${textColor}`}>
