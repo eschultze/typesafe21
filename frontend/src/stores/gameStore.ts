@@ -135,7 +135,7 @@ export const useGameStore = create<GameStore>()(
         ) {
           const result = lastAction.result;
           const aiHand = result.hands?.find(
-            (h: any) => h.is_ai
+            (h: any) => h.name === "You"
           );
           if (aiHand) {
             updates.ai_bet_history = [...get().ai_bet_history, aiHand.bet];

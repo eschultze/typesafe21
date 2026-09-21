@@ -24,7 +24,7 @@ export function GameControls() {
   };
 
   return (
-    <div className="sticky bottom-0 z-[var(--z-sticky)] bg-background/80 backdrop-blur-sm border-t border-border p-3 md:p-0 md:border-0 md:bg-transparent md:backdrop-blur-none md:static">
+    <div className="px-4 py-3 md:px-6 md:py-4">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <Badge variant={connected ? "default" : "destructive"}>
