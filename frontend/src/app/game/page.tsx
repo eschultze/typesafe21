@@ -14,6 +14,7 @@ import { WinSound } from "@/components/game/WinSound";
 import { StatsPanel } from "@/components/game/StatsPanel";
 import { CardTracker } from "@/components/game/CardTracker";
 import { ChipScene } from "@/components/game/ChipScene";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "motion/react";
 
 export default function GameBoard() {
@@ -36,9 +37,9 @@ export default function GameBoard() {
           Typesafe<span className="text-accent">21</span>
         </h1>
         {phase !== "idle" && (
-          <span className="text-xs font-mono text-muted-foreground tabular-nums">
-            {phase}
-          </span>
+          <Badge variant="secondary" className="text-xs font-mono tabular-nums capitalize">
+            {phase.replace("_", " ")}
+          </Badge>
         )}
       </motion.header>
 

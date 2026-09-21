@@ -35,7 +35,7 @@ export function PlayingCard({ card, hidden = false, index = 0, size = "md" }: Pl
         type: "spring",
         stiffness: 300,
         damping: 25,
-        delay: index * 0.1,
+        delay: index * 0.05,
       }}
       className={`${dims} relative select-none rounded-lg border-2 shadow-lg overflow-hidden ${
         isHidden

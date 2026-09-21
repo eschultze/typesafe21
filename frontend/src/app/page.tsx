@@ -44,7 +44,7 @@ export default function Home() {
       </nav>
 
       {/* ─── Marquee Hero ─── */}
-      <section className="flex-1 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-[var(--space-2xl)] items-center px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-3xl)] max-w-[76rem] mx-auto w-full">
+      <section className="flex-1 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-[var(--space-2xl)] items-center px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-2xl)] max-w-[76rem] mx-auto w-full">
         <div className="flex flex-col gap-[var(--space-lg)]">
           <h1 className="text-[var(--text-display)] font-light tracking-[var(--tracking-display)] leading-[var(--lh-tight)] text-foreground">
             Typesafe
@@ -86,11 +86,6 @@ export default function Home() {
             >
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-foreground">{p.name}</span>
-                {p.accent && (
-                  <span className="text-[10px] font-medium tracking-[0.1em] uppercase text-accent">
-                    AI
-                  </span>
-                )}
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {p.strategy}
@@ -149,9 +144,7 @@ export default function Home() {
       <footer className="px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-3xl)] border-t-2 border-border">
         <div className="max-w-[76rem] mx-auto flex flex-col gap-[var(--space-lg)]">
           <p className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground max-w-[38ch]">
-            The AI always wins.
-            <br />
-            Sometimes.
+            The AI always wins. Sometimes.
           </p>
           <div className="flex items-center gap-6 text-xs text-muted-foreground">
             <span className="font-medium tracking-[0.16em] uppercase">Typesafe 21</span>

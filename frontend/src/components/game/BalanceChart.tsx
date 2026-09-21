@@ -8,7 +8,7 @@ export function BalanceChart() {
 
   if (players.length === 0) return null;
 
-  const aiPlayer = players.find((p) => p.name === "You");
+  const aiPlayer = players.find((p) => p.name === "AI");
   if (!aiPlayer || aiPlayer.balance_history.length < 2) return null;
 
   const history = aiPlayer.balance_history;

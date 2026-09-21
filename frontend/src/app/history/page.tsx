@@ -10,6 +10,20 @@ interface Session {
   is_complete: number;
 }
 
+function SkeletonCard() {
+  return (
+    <div className="p-4 rounded-[10px] bg-card border border-border animate-pulse">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="h-4 w-24 rounded bg-muted" />
+          <div className="h-4 w-20 rounded bg-muted" />
+        </div>
+        <div className="h-4 w-16 rounded bg-muted" />
+      </div>
+    </div>
+  );
+}
+
 export default function HistoryPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,42 +41,75 @@ export default function HistoryPage() {
   }, []);
 
   return (
-    <main className="min-h-screen p-8 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">
-        <Link href="/game" className="text-green-500 hover:underline">
-          ← Game
-        </Link>{" "}
-        | Session History
-      </h1>
+    <div className="min-h-screen flex flex-col">
+      {/* ─── Nav ─── */}
+      <nav className="w-full border-b-2 border-border px-[var(--space-lg)] py-3 flex items-center justify-between">
+        <span className="font-bold text-sm tracking-[0.16em] uppercase text-foreground">
+          Typesafe 21
+        </span>
+        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <Link href="/history" className="text-foreground font-medium hover:text-accent transition-colors">
+            History
+          </Link>
+          <Link href="/game" className="hover:text-foreground transition-colors">
+            Play
+          </Link>
+        </div>
+      </nav>
 
-      {loading && (
-        <p className="text-muted-foreground">Loading sessions...</p>
-      )}
+      {/* ─── Content ─── */}
+      <main className="flex-1 px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-2xl)] max-w-[76rem] mx-auto w-full">
+        <h1 className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground mb-[var(--space-xl)]">
+          Session History
+        </h1>
 
-      {error && (
-        <p className="text-red-400 mb-4">Error: {error}</p>
-      )}
-
-      {!loading && !error && sessions.length === 0 && (
-        <p className="text-muted-foreground">No completed sessions yet. Play some rounds and click "End Session" to save your progress.</p>
-      )}
-
-      <div className="flex flex-col gap-3">
-        {sessions.map((s) => (
-          <div
-            key={s.id}
-            className="p-4 rounded-lg bg-white/5 border border-white/10 flex justify-between items-center"
-          >
-            <div>
-              <span className="font-mono text-sm">Session #{s.id}</span>
-              <span className="text-muted-foreground text-sm ml-3">
-                {new Date(s.started_at).toLocaleDateString()}
-              </span>
-            </div>
-            <span className="text-sm">{s.total_rounds} rounds</span>
+        {loading && (
+          <div className="flex flex-col gap-3 max-w-2xl">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
           </div>
-        ))}
-      </div>
-    </main>
+        )}
+
+        {error && (
+          <p className="text-[var(--color-destructive)] mb-4">Error: {error}</p>
+        )}
+
+        {!loading && !error && sessions.length === 0 && (
+          <div className="flex flex-col gap-3 max-w-2xl">
+            <p className="text-muted-foreground">
+              No completed sessions yet. Play some rounds and click &quot;End Session&quot; to save your progress.
+            </p>
+            <Link
+              href="/game"
+              className="inline-flex items-center gap-2 text-foreground font-medium text-[var(--text-md)] hover:text-accent transition-colors group mt-4"
+            >
+              Start Playing
+              <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
+            </Link>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 max-w-2xl">
+          {sessions.map((s) => (
+            <Link
+              key={s.id}
+              href={`/history/${s.id}`}
+              className="p-4 rounded-[10px] bg-card border border-border flex justify-between items-center cursor-pointer transition-all hover:border-accent/30 hover:bg-accent/5"
+            >
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-sm text-foreground">Session #{s.id}</span>
+                <span className="text-muted-foreground text-sm">
+                  {new Date(s.started_at).toLocaleDateString()}
+                </span>
+              </div>
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {s.total_rounds} {s.total_rounds === 1 ? "round" : "rounds"}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </main>
+    </div>
   );
 }
