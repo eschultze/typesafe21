@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +8,6 @@ export function GameControls() {
   const { phase, auto_play, round_number } = useGameStore((s) => s.state);
   const sendAction = useGameStore((s) => s.sendAction);
   const connected = useGameStore((s) => s.connected);
-  const [autoRounds, setAutoRounds] = useState(50);
 
   const isIdle = phase === "idle";
 
@@ -52,12 +50,29 @@ export function GameControls() {
           Play Round
         </Button>
 
+        {[1, 5, 10].map((n) => (
+          <Button
+            key={n}
+            onClick={() =>
+              sendAction("auto_play", {
+                enabled: true,
+                delay_ms: 500,
+                rounds: n,
+              })
+            }
+            disabled={!connected || auto_play}
+            variant="outline"
+          >
+            +{n} round{n > 1 ? "s" : ""}
+          </Button>
+        ))}
+
         <Button
           onClick={() =>
             sendAction("auto_play", {
               enabled: !auto_play,
               delay_ms: 500,
-              rounds: autoRounds,
+              rounds: null,
             })
           }
           disabled={!connected}
@@ -65,30 +80,7 @@ export function GameControls() {
         >
           {auto_play ? "Stop Auto" : "Auto Play"}
         </Button>
-
-        {auto_play && (
-          <Button
-            onClick={() => sendAction("auto_play", { enabled: false })}
-            variant="destructive"
-          >
-            Stop
-          </Button>
-        )}
       </div>
-
-      {!auto_play && (
-        <div className="flex items-center gap-2 text-sm">
-          <label className="text-muted-foreground">Auto rounds:</label>
-          <input
-            type="number"
-            value={autoRounds}
-            onChange={(e) => setAutoRounds(Number(e.target.value))}
-            className="w-20 px-2 py-1 rounded bg-white/10 border border-white/20 text-sm"
-            min={1}
-            max={1000}
-          />
-        </div>
-      )}
     </div>
   );
 }
