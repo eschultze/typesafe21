@@ -35,19 +35,19 @@ export function GameControls() {
         </Button>
 
         <Button
-          onClick={() => sendAction("continue_game")}
-          disabled={!connected}
-          variant="outline"
-        >
-          Continue
-        </Button>
-
-        <Button
           onClick={() => sendAction("play_round")}
           disabled={!connected || !isIdle}
           className="bg-green-600 hover:bg-green-700"
         >
           Play Round
+        </Button>
+
+        <Button
+          onClick={() => sendAction("end_session")}
+          disabled={!connected}
+          variant="outline"
+        >
+          End Session
         </Button>
 
         {[1, 5, 10].map((n) => (

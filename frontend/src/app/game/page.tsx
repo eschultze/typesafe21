@@ -44,8 +44,8 @@ export default function GameBoard() {
 
         {/* Players */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-          {players.map((_, i) => (
-            <PlayerHand key={i} playerIndex={i} />
+          {players.map((p, i) => (
+            <PlayerHand key={p.name} playerIndex={i} />
           ))}
         </div>
 

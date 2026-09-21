@@ -101,6 +101,12 @@ export const useGameStore = create<GameStore>()(
 
         const updates: Partial<GameStore> = { state };
 
+        // Detect new game (round_number resets to 0 after being > 0)
+        if (state.round_number === 0 && prev.round_number > 0) {
+          updates.ai_bet_history = [];
+          updates.ai_confidence_history = [];
+        }
+
         // Detect bet changes → trigger chip animation
         const newBets = state.players.map((p) => p.current_bet);
         const oldBets = get().prev_bets;

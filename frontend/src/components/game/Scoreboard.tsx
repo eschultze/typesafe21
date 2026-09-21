@@ -11,7 +11,8 @@ export function Scoreboard() {
   return (
     <div className="flex gap-3">
       {players.map((p) => {
-        const profit = p.balance - 100;
+        const startingBalance = p.balance_history[0] ?? 100;
+        const profit = p.balance - startingBalance;
         return (
           <motion.div
             key={p.name}

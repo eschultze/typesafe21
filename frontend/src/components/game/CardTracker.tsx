@@ -19,7 +19,7 @@ export function CardTracker() {
         {/* Y-axis labels */}
         <div className="flex flex-col justify-between text-[9px] text-muted-foreground pr-1 pb-4">
           <span>{maxPlayed}</span>
-          <span>{Math.round(maxPlayed / 2)}</span>
+          <span>{Math.floor(maxPlayed / 2)}</span>
           <span>0</span>
         </div>
 

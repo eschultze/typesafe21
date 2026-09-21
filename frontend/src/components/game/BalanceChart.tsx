@@ -29,7 +29,8 @@ export function BalanceChart() {
   const pathD = `M ${points.join(" L ")}`;
   const areaD = `${pathD} L ${width - padding},${height - padding} L ${padding},${height - padding} Z`;
 
-  const profit = aiPlayer.balance - 100;
+  const startingBalance = history[0] ?? 100;
+  const profit = aiPlayer.balance - startingBalance;
 
   return (
     <div className="flex flex-col items-center p-3 rounded-lg bg-white/5 border border-white/10">
@@ -51,12 +52,12 @@ export function BalanceChart() {
           animate={{ pathLength: 1 }}
           transition={{ duration: 0.5 }}
         />
-        {/* Baseline at $100 */}
+        {/* Baseline at starting balance */}
         <line
           x1={padding}
-          y1={padding + (1 - (100 - minVal) / range) * (height - padding * 2)}
+          y1={padding + (1 - (startingBalance - minVal) / range) * (height - padding * 2)}
           x2={width - padding}
-          y2={padding + (1 - (100 - minVal) / range) * (height - padding * 2)}
+          y2={padding + (1 - (startingBalance - minVal) / range) * (height - padding * 2)}
           stroke="white"
           strokeOpacity="0.2"
           strokeDasharray="4 4"

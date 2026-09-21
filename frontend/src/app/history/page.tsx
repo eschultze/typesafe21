@@ -12,12 +12,18 @@ interface Session {
 
 export default function HistoryPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/history")
-      .then((r) => r.json())
+    fetch("/api/history")
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load history (${r.status})`);
+        return r.json();
+      })
       .then(setSessions)
-      .catch(console.error);
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -29,8 +35,16 @@ export default function HistoryPage() {
         | Session History
       </h1>
 
-      {sessions.length === 0 && (
-        <p className="text-muted-foreground">No completed sessions yet.</p>
+      {loading && (
+        <p className="text-muted-foreground">Loading sessions...</p>
+      )}
+
+      {error && (
+        <p className="text-red-400 mb-4">Error: {error}</p>
+      )}
+
+      {!loading && !error && sessions.length === 0 && (
+        <p className="text-muted-foreground">No completed sessions yet. Play some rounds and click "End Session" to save your progress.</p>
       )}
 
       <div className="flex flex-col gap-3">

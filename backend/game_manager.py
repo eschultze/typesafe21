@@ -40,6 +40,7 @@ class GameSession:
 
     def new_game(self):
         self.deck = TrackedDeck(num_decks=6)
+        self.dealer_hand = Hand()
         for p in self.players:
             p.reset_session()
         self.session_id = db.create_session()
@@ -188,6 +189,10 @@ class GameSession:
             count += 1
             await asyncio.sleep(self.auto_play_delay_ms / 1000)
         self.auto_play = False
+        await broadcast_fn({
+            "type": "state_update",
+            "state": self.get_state(),
+        })
 
     def end_session(self):
         if self.session_id:
