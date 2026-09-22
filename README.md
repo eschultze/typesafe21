@@ -1,12 +1,8 @@
 # Typesafe 21
 
-AI-powered blackjack simulator where four players with different strategies compete head-to-head — two remote AIs (TypeSafe Jev + local Laya) and two deterministic baselines. Available as both a **terminal app** (Textual TUI) and a **web app** (Next.js + FastAPI) with a [Hallmark](https://github.com/Nutlope/hallmark)-designed Midnight theme.
-
-> **Note:** The terminal version is being sunset in favor of the web version. The web app provides the same gameplay with a richer UI, 3D visuals, animated cards, and session history. The terminal code remains in the repo for reference but is no longer actively maintained.
+AI-powered blackjack simulator where four players with different strategies compete head-to-head — two remote AIs (TypeSafe Jev + local Laya) and two deterministic baselines. Built with Next.js + FastAPI with a [Hallmark](https://github.com/Nutlope/hallmark)-designed Midnight theme.
 
 ## Quick Start
-
-### Web (recommended)
 
 ```bash
 cd typesafe21
@@ -14,14 +10,6 @@ cd typesafe21
 ```
 
 Opens `http://localhost:3000` (frontend) and `http://localhost:8000` (backend). Press `Ctrl+C` to stop both.
-
-### Terminal
-
-```bash
-cd typesafe21
-uv sync --extra tui
-uv run python main.py
-```
 
 ## How It Works
 
@@ -60,7 +48,7 @@ The AIs decide **autonomously** — no basic strategy hints or bias are sent. Ba
 - Starting balance: $100 per player
 - Minimum bet: $10
 
-## Game Modes (Web)
+## Game Modes
 
 - **New Game** — Start a fresh session with a new shoe
 - **Play Round** — Play a single round
@@ -99,7 +87,7 @@ The AI's Score determines the bet aggressiveness. No hardcoded formula — the A
 
 ## Configuration
 
-The web version reads these environment variables:
+The app reads these environment variables:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -114,10 +102,10 @@ The web version reads these environment variables:
 
 ```
 typesafe21/
-├── pyproject.toml          # uv project config (single venv for all Python deps)
+├── pyproject.toml          # uv project config
 ├── dev.sh                  # Start frontend + backend (Ctrl+C to stop)
 │
-├── rules/                  # Shared game logic
+├── rules/                  # Game logic
 │   ├── cards.py            # Card, Hand, TrackedDeck (with to_dict())
 │   ├── player.py           # Player classes (Random, Basic, AI, Laya)
 │   ├── game.py             # Round logic, dealing, payouts, splits
@@ -130,12 +118,9 @@ typesafe21/
 ├── models.py               # Pydantic models (GameState, PlayerState, etc.)
 ├── game_manager.py         # Game session manager (async, to_thread)
 ├── connection_manager.py   # WebSocket broadcast manager
-├── main.py                 # Terminal entry point (sunset)
 ├── web_main.py             # FastAPI entry point
 │
-├── ui/                     # Terminal UI (Textual) [sunset, kept for reference]
 ├── frontend/               # Next.js 19 + React + Three.js
-├── cash_register.mp3       # Sound effect on AI win
 ├── game_history.db         # Created at runtime
 └── .env                    # API keys (gitignored)
 ```

@@ -1,23 +1,6 @@
 # Architecture — Typesafe 21
 
-> **Note:** The terminal version is being sunset in favor of the web version. The architecture below covers both for reference, but active development targets the web app.
-
 ## System Overview
-
-### Terminal (sunset)
-
-```
-main.py  ──>  ui/app.py  ──>  ui/screens/game.py  ──>  rules/game.py  ──>  rules/typesafe_ai.py  ──>  TypeSafe API (Jev)
-                                │                                       │                                       │
-                                │                                       ├──>  rules/laya_ai.py  ──>  Laya model (Laya)
-                                v                                       v
-                            ui/widgets/                             rules/player.py
-                            (Textual CSS)                           rules/cards.py
-                                                                  rules/basic_strategy.py
-                                                                  (BasicStrategyPlayer)
-```
-
-### Web (active)
 
 ```
 Browser (Next.js)                Backend (FastAPI)              AI Engines
@@ -30,19 +13,17 @@ Browser (Next.js)                Backend (FastAPI)              AI Engines
                                                                 └──────────────┘
 ```
 
-The web version uses the same shared game logic in `rules/` as the terminal. The FastAPI backend in `web_main.py` manages sessions, broadcasts state via WebSocket, and persists rounds to SQLite. The frontend is a Next.js SPA with Zustand state management, Motion animations, and Three.js 3D scenes.
+FastAPI backend in `web_main.py` manages sessions, broadcasts state via WebSocket, and persists rounds to SQLite. Frontend is a Next.js SPA with Zustand state management, Motion animations, and Three.js 3D scenes.
 
 ## Project Structure
 
-All Python code lives at the project root with a single `pyproject.toml` managed by `uv`:
-
 ```
 typesafe21/
-├── pyproject.toml          # Single venv for all Python deps (uv)
+├── pyproject.toml          # uv project config
 ├── .venv/                  # Managed by uv
 ├── dev.sh                  # Starts both frontend and backend
 │
-├── rules/                  # Shared game logic (imported by both TUI and web)
+├── rules/                  # Game logic
 │   ├── cards.py
 │   ├── player.py
 │   ├── game.py
@@ -55,10 +36,8 @@ typesafe21/
 ├── models.py               # Pydantic models for WebSocket API
 ├── game_manager.py         # Game session manager (async, asyncio.to_thread)
 ├── connection_manager.py   # WebSocket broadcast manager
-├── main.py                 # TUI entry point
 ├── web_main.py             # FastAPI entry point
 │
-├── ui/                     # Terminal UI (Textual) [sunset]
 └── frontend/               # Next.js 19 frontend
 ```
 
@@ -190,7 +169,7 @@ Configuration:
 - Foreign keys enforced (`PRAGMA foreign_keys = ON`)
 - Indexes on `rounds(session_id)`, `player_rounds(round_id)`, `player_rounds(player_name)`
 
-## Web Backend
+## Backend
 
 ### `web_main.py` — FastAPI App
 
@@ -228,7 +207,7 @@ Configuration:
 - `ConnectionManager` — Tracks WebSocket connections per game ID
 - `broadcast()` — Sends messages to all connected clients in a game. Dead connections that fail during send are automatically removed.
 
-## Web Frontend
+## Frontend
 
 ### State Management — `gameStore.ts` (Zustand)
 
@@ -263,7 +242,7 @@ Configuration:
 - Configurable host/port via `NEXT_PUBLIC_WS_HOST` / `NEXT_PUBLIC_WS_PORT`
 - Dispatches `state_update` messages to Zustand store
 
-## Data Flow: One Round (Web)
+## Data Flow: One Round
 
 ```
 1. Frontend sends { action: "play_round" } via WebSocket
@@ -307,17 +286,15 @@ Configuration:
 
 6. **No fallbacks** — If the API is down, the game stops. This forces the AI to actually play rather than silently reverting to local rules. Laya runs locally so it's always available.
 
-7. **Shared game logic** — All Python code uses a single `rules/` package at the root, shared by both the TUI and the web backend via `pyproject.toml`.
+7. **Dual AI engines** — Jev (remote, ~240ms) and Laya (local, ~33ms GPU) use identical prompts with Choice and Score primitives, enabling direct comparison of remote vs local inference.
 
-8. **Dual AI engines** — Jev (remote, ~240ms) and Laya (local, ~33ms GPU) use identical prompts with Choice and Score primitives, enabling direct comparison of remote vs local inference.
+8. **Real-time updates** — WebSocket broadcasts full game state after every phase, enabling smooth animations and live updates.
 
-9. **Real-time updates** — WebSocket broadcasts full game state after every phase, enabling smooth animations and live updates.
-
-10. **Single venv** — All Python dependencies managed by `uv` with one `pyproject.toml`. No duplicate virtual environments.
+9. **Single venv** — All Python dependencies managed by `uv` with one `pyproject.toml`.
 
 ## Design System — Midnight (Hallmark)
 
-The web frontend uses a [Hallmark](https://github.com/Nutlope/hallmark)-designed Midnight theme. Tokens are defined in `frontend/src/app/globals.css` and consumed by all components via CSS custom properties.
+The frontend uses a [Hallmark](https://github.com/Nutlope/hallmark)-designed Midnight theme. Tokens are defined in `frontend/src/app/globals.css` and consumed by all components via CSS custom properties.
 
 **Palette** (OKLCH):
 - Paper: `oklch(15% 0.022 250)` — dark blue-grey base
