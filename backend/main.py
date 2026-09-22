@@ -47,6 +47,15 @@ async def session_detail(session_id: int):
     }
 
 
+@app.get("/api/leaderboard")
+async def leaderboard():
+    import database as db
+    return {
+        "single_turn": db.get_top_single_turn_profits(),
+        "sessions": db.get_top_session_profits(),
+    }
+
+
 @app.websocket("/ws/{game_id}")
 async def websocket_endpoint(websocket: WebSocket, game_id: str):
     await manager.connect(websocket, game_id)
