@@ -1,6 +1,6 @@
 import asyncio
 from rules.cards import TrackedDeck, Hand, Card
-from rules.player import RandomPlayer, BasicStrategyPlayer, AIPlayer
+from rules.player import RandomPlayer, BasicStrategyPlayer, AIPlayer, LayaPlayer
 from rules.game import do_bets, deal_initial, play_player_hand, play_dealer, settle_round
 from models import GameState, PlayerState, HandModel, ShoeState, BetResult, HandResult, RoundResultModel
 import database as db
@@ -35,7 +35,8 @@ class GameSession:
         self.players: list = [
             RandomPlayer("Random"),
             BasicStrategyPlayer("Basic"),
-            AIPlayer("You"),
+            AIPlayer("Jev (AI)"),
+            LayaPlayer("Laya (AI)"),
         ]
         self.dealer_hand = Hand()
         self.round_number = 0

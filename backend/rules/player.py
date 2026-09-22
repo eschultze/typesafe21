@@ -120,7 +120,7 @@ class BasicStrategyPlayer(Player):
 
 
 class AIPlayer(Player):
-    def __init__(self, name: str = "You"):
+    def __init__(self, name: str = "Jev (AI)"):
         super().__init__(name)
         self.last_confidence = 0.0
         self.last_decision = ""
@@ -158,6 +158,64 @@ class AIPlayer(Player):
             return 0
 
         from rules.typesafe_ai import get_ai_bet
+        result = get_ai_bet(
+            balance=self.balance,
+            min_bet=MIN_BET,
+            true_count=deck.true_count,
+            running_count=deck.running_count,
+            cards_remaining=deck.remaining,
+            cards_dealt=deck.get_cards_since_reshuffle(),
+            total_cards=deck.total_cards,
+            session_wins=self.wins,
+            session_losses=self.losses,
+            opponent_balances=opponent_balances,
+            remaining_by_rank=deck.get_remaining_by_rank(),
+        )
+
+        self.last_bet_info = result
+        bet = max(MIN_BET, min(result["bet"], self.balance))
+        return bet
+
+
+class LayaPlayer(Player):
+    def __init__(self, name: str = "Laya (AI)"):
+        super().__init__(name)
+        self.last_confidence = 0.0
+        self.last_decision = ""
+        self.last_probabilities = {}
+        self.last_bet_info = {}
+
+    def make_decision(
+        self,
+        dealer_hand: Hand,
+        deck: TrackedDeck,
+        can_double: bool = True,
+        can_split: bool = True,
+    ) -> str:
+        if self.hand.value >= 21:
+            return "stand"
+
+        from rules.laya_ai import get_ai_decision
+        result = get_ai_decision(
+            self.hand,
+            dealer_hand,
+            deck,
+            session_wins=self.wins,
+            session_losses=self.losses,
+            can_double=can_double,
+            can_split=can_split,
+        )
+        self.last_confidence = result["confidence"]
+        self.last_decision = result["decision"]
+        self.last_probabilities = result["probabilities"]
+
+        return result["decision"]
+
+    def decide_bet(self, deck: TrackedDeck, opponent_balances: list[int] | None = None) -> int:
+        if self.balance < MIN_BET:
+            return 0
+
+        from rules.laya_ai import get_ai_bet
         result = get_ai_bet(
             balance=self.balance,
             min_bet=MIN_BET,

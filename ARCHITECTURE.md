@@ -7,11 +7,12 @@
 ### Terminal (sunset)
 
 ```
-main.py  ──>  ui/app.py  ──>  ui/screens/game.py  ──>  game.py  ──>  typesafe_ai.py  ──>  TypeSafe API
+main.py  ──>  ui/app.py  ──>  ui/screens/game.py  ──>  game.py  ──>  typesafe_ai.py  ──>  TypeSafe API (Jev)
                                 │                               │                               │
-                                v                               v                               v
-                            ui/widgets/                     player.py              (hit/stand/double/split)
-                            (Textual CSS)                   cards.py               (bet sizing via Score)
+                                │                               ├──>  laya_ai.py  ──>  Laya model (Laya)
+                                v                               v
+                            ui/widgets/                     player.py
+                            (Textual CSS)                   cards.py
                                                           basic_strategy.py
                                                           (BasicStrategyPlayer)
 ```
@@ -19,13 +20,14 @@ main.py  ──>  ui/app.py  ──>  ui/screens/game.py  ──>  game.py  ─�
 ### Web (active)
 
 ```
-Browser (Next.js)                Backend (FastAPI)              TypeSafe API
-┌─────────────────┐             ┌──────────────────┐           ┌──────────┐
-│  React + Zustand │◄─WebSocket─┤  game_manager.py  │───────────┤  Choice  │
-│  Tailwind + 3D   │             │  rules/           │           │  Score   │
-│  shadcn/ui       │◄──REST─────┤  database.py      │           └──────────┘
-└─────────────────┘             └──────────────────┘
-      :3000                           :8000
+Browser (Next.js)                Backend (FastAPI)              AI Engines
+┌─────────────────┐             ┌──────────────────┐           ┌──────────────┐
+│  React + Zustand │◄─WebSocket─┤  game_manager.py  │───────────┤ TypeSafe API │
+│  Tailwind + 3D   │             │  rules/           │           │ (Jev AI)     │
+│  shadcn/ui       │◄──REST─────┤  database.py      │           ├──────────────┤
+└─────────────────┘             └──────────────────┘           │ Laya model   │
+      :3000                           :8000                    │ (Local AI)   │
+                                                               └──────────────┘
 ```
 
 The web version ports the existing Python game logic to a FastAPI backend with WebSocket real-time updates. The frontend is a Next.js SPA with Zustand state management, Motion animations, and Three.js 3D scenes.
@@ -52,12 +54,15 @@ Game mechanics stay here. No strategy logic. No decision-making.
 - `Player` (ABC) — Base class with balance, betting, hand management, split_hands storage, balance_history
 - `RandomPlayer` — Random hit/stand, random flat bets ($10-$30)
 - `BasicStrategyPlayer` — Follows basic strategy exactly (6-deck, dealer stands S17), always bets minimum
-- `AIPlayer` — Delegates all decisions to TypeSafe API via `typesafe_ai.py`
+- `AIPlayer` — Delegates all decisions to TypeSafe API via `typesafe_ai.py` (Jev AI)
   - `decide_bet()` — Calls `get_ai_bet()` with full shoe composition
   - `make_decision()` — Calls `get_ai_decision()` for hit/stand/double/split
   - `split_hands` — List of `(hand, bet, decision, confidence)` for split hands
+- `LayaPlayer` — Delegates all decisions to local Laya model via `laya_ai.py` (Laya AI)
+  - Same interface as `AIPlayer` — uses identical prompts with Choice and Score primitives
+  - Laya runs locally: ~33ms on GPU, ~300ms on CPU (vs ~240ms for TypeSafe API)
 
-### `typesafe_ai.py` — AI Decision Engine
+### `typesafe_ai.py` — TypeSafe AI Decision Engine (Jev)
 
 Two functions, two TypeSafe API calls per round:
 
@@ -75,6 +80,16 @@ Two functions, two TypeSafe API calls per round:
   - Score 0 → 5%, Score 1 → 15%, Score 2 → 25%, Score 3 → 35%, Score 4 → 50%
 - Dynamic hint based on actual true count
 - Returns: bet, score, confidence, probabilities, reasoning
+
+### `laya_ai.py` — Local Laya AI Decision Engine
+
+Same interface as `typesafe_ai.py`, using the [Laya](https://github.com/NandhaKishorM/laya) library for local inference:
+
+- Lazy-loaded singleton: `laya.load("convaiinnovations/laya")` (English checkpoint, ModernBERT-large, 421M params)
+- Uses identical state dictionaries and question criteria as TypeSafe
+- **Choice** primitive for action selection, **Score** primitive for bet sizing
+- Response parsing: `result["answers"]["action"]["choice"]` with `confidence` and `probabilities`
+- ~33ms on GPU, ~300ms on CPU (vs ~240ms for TypeSafe API round-trip)
 
 ### `basic_strategy.py` — Basic Strategy Reference
 
@@ -170,7 +185,8 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 ### State Management — `gameStore.ts` (Zustand)
 
 - `GameState` — Mirror of backend state (phase, players, dealer, shoe)
-- `ai_bet_history` / `ai_confidence_history` — Tracked across rounds for StatsPanel
+- `jev_bet_history` / `jev_confidence_history` — Jev AI stats tracked across rounds
+- `laya_bet_history` / `laya_confidence_history` — Laya AI stats tracked across rounds
 - `prev_bets` — Used to detect bet changes and trigger chip animations
 - `chipsAnimating` — Animation flag
 - WebSocket integration via `sendAction()` and `updateState()`
@@ -183,9 +199,9 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 - `GameControls` — New Game, Play Round (accent), End Session, Auto Play with 8-state styling
 - `Scoreboard` — Player balances with animated profit indicators, varied column widths
 - `ShoeIndicator` — Progress bar (accent) showing shoe depletion + true count badge
-- `BalanceChart` — SVG line chart of AI balance over time with themed stroke/fill colors
+- `BalanceChart` — Separate SVG line charts for Jev and Laya balance over time
 - `CardTracker` — Bar chart showing card composition by rank with themed bar colors
-- `StatsPanel` — AI average bet, confidence, round count on card background
+- `StatsPanel` — Separate stats panels for Jev and Laya (avg bet, confidence, rounds)
 - `LastAction` — Displays previous round's results with profit/loss badges
 - `WinSound` — Plays cash register sound on AI win
 - `HeroScene` / `ChipScene` — Three.js 3D scenes
@@ -201,15 +217,17 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 ```
 1. Frontend sends { action: "play_round" } via WebSocket
 2. Backend: do_bets()
-   ├── AI calls get_ai_bet() → Score 0-4 → mapped to balance-based percentage
+   ├── Jev AI calls TypeSafe API get_ai_bet() → Score 0-4 → balance-based %
+   ├── Laya AI calls local get_ai_bet() → Score 0-4 → balance-based %
    ├── BasicStrategyPlayer bets minimum
    ├── RandomPlayer picks random flat bet
    └── Bets deducted from balances
 3. Backend: deal_initial()
-   ├── Deal one shared hand (2 cards) → copy to all players
+   ├── Deal one shared hand (2 cards) → copy to all 4 players
    └── Deal dealer's own hand (2 cards)
 4. Backend: For each player: play_player_hand()
-   ├── AI calls get_ai_decision() → hit/stand/double/split
+   ├── Jev AI calls TypeSafe API get_ai_decision() → hit/stand/double/split
+   ├── Laya AI calls local get_ai_decision() → hit/stand/double/split
    ├── BasicStrategy follows lookup table
    └── Random picks randomly
 5. Backend: play_dealer() — Dealer hits until >= 17
@@ -221,9 +239,9 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 
 ## Key Design Decisions
 
-1. **Autonomous AI** — Every decision goes to TypeSafe with zero local bias. No basic strategy hints sent.
+1. **Autonomous AI** — Every decision goes to the AI engine with zero local bias. No basic strategy hints sent. Jev uses the remote TypeSafe API; Laya uses a local model.
 
-2. **Same starting hand** — All three players receive identical cards for fair strategy comparison.
+2. **Same starting hand** — All four players receive identical cards for fair strategy comparison.
 
 3. **Score for betting** — Bet sizing is a continuous spectrum. Score maps to balance-based percentages (5%-50%).
 
@@ -231,9 +249,11 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 
 5. **Rich state** — AI sees shoe composition, opponent balances, and session performance.
 
-6. **No fallbacks** — If the API is down, the game stops. This forces the AI to actually play rather than silently reverting to local rules.
+6. **No fallbacks** — If the API is down, the game stops. This forces the AI to actually play rather than silently reverting to local rules. Laya runs locally so it's always available.
 
 7. **Shared game logic** — The `backend/rules/` directory mirrors root game modules with `to_dict()` serialization, keeping terminal and web independent.
+
+8. **Dual AI engines** — Jev (remote, ~240ms) and Laya (local, ~33ms GPU) use identical prompts with Choice and Score primitives, enabling direct comparison of remote vs local inference.
 
 8. **Real-time updates** — WebSocket broadcasts full game state after every phase, enabling smooth animations and live updates.
 

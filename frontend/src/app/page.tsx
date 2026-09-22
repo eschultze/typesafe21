@@ -3,8 +3,14 @@ import { HeroScene } from "@/components/game/HeroScene";
 
 const players = [
   {
-    name: "AI",
-    strategy: "TypeSafe AI decides everything autonomously",
+    name: "Jev (AI)",
+    strategy: "Remote TypeSafe API — decides everything autonomously",
+    bet: "AI-scored, balance-based (% of bankroll)",
+    accent: true,
+  },
+  {
+    name: "Laya (AI)",
+    strategy: "Local Laya model — 33ms decisions, runs on-device",
     bet: "AI-scored, balance-based (% of bankroll)",
     accent: true,
   },
@@ -52,7 +58,7 @@ export default function Home() {
             <span className="text-accent">21</span>
           </h1>
           <p className="text-[var(--text-lg)] text-muted-foreground max-w-[40ch]">
-            Three players. One shoe. Zero mercy.
+            Four players. One shoe. Zero mercy.
           </p>
           <div className="pt-[var(--space-sm)]">
             <Link
@@ -74,7 +80,7 @@ export default function Home() {
         <h2 className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground mb-[var(--space-xl)]">
           How it works
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr_0.8fr] gap-[var(--space-lg)]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-[var(--space-lg)]">
           {players.map((p) => (
             <div
               key={p.name}

@@ -1,6 +1,6 @@
 # Typesafe 21
 
-AI-powered blackjack simulator where three players with different strategies compete head-to-head, powered by [TypeSafe System One](https://docs.typesafe.ai). Available as both a **terminal app** (Textual TUI) and a **web app** (Next.js + FastAPI) with a [Hallmark](https://github.com/Nutlope/hallmark)-designed Midnight theme.
+AI-powered blackjack simulator where four players with different strategies compete head-to-head — two remote AIs (TypeSafe Jev + local Laya) and two deterministic baselines. Available as both a **terminal app** (Textual TUI) and a **web app** (Next.js + FastAPI) with a [Hallmark](https://github.com/Nutlope/hallmark)-designed Midnight theme.
 
 > **Note:** The terminal version is being sunset in favor of the web version. The web app provides the same gameplay with a richer UI, 3D visuals, animated cards, and session history. The terminal code remains in the repo for reference but is no longer actively maintained.
 
@@ -27,15 +27,21 @@ python3 main.py
 
 ## How It Works
 
-Three players sit at the table, each dealt the **same starting hand** for fair comparison:
+Four players sit at the table, each dealt the **same starting hand** for fair comparison:
+
+```
+Random | Basic
+Jev    | Laya
+```
 
 | Player | Strategy | Bet Sizing |
 |--------|----------|------------|
 | **Random** | Random hit/stand decisions | Random flat bets ($10-$30) |
 | **Basic** | Follows basic strategy (6-deck, dealer stands S17) | Always minimum bet |
-| **You (AI)** | TypeSafe AI decides everything autonomously | AI-scored, balance-based (% of bankroll) |
+| **Jev (AI)** | Remote TypeSafe API — decides everything autonomously | AI-scored, balance-based (% of bankroll) |
+| **Laya (AI)** | Local [Laya](https://github.com/NandhaKishorM/laya) model — 33ms decisions on GPU | AI-scored, balance-based (% of bankroll) |
 
-The AI sends the full game state to TypeSafe's System One API on every decision. It sees:
+Both AI players send the full game state to their respective engines on every decision. They see:
 
 - All visible cards (your hand, dealer upcard)
 - Shoe composition (running count, true count, cards remaining by rank)
@@ -43,7 +49,7 @@ The AI sends the full game state to TypeSafe's System One API on every decision.
 - Session performance (wins, losses)
 - Opponent balances
 
-The AI decides **autonomously** — no basic strategy hints or bias are sent. Basic strategy is only displayed for reference.
+The AIs decide **autonomously** — no basic strategy hints or bias are sent. Basic strategy is only displayed for reference.
 
 ## Rules
 
@@ -65,7 +71,14 @@ The AI decides **autonomously** — no basic strategy hints or bias are sent. Ba
 - **+1 / +5 / +10 rounds** — Play a fixed number of rounds automatically
 - **History** — Browse completed sessions at `/history`
 
-## AI Primitives Used
+## AI Engines
+
+| Engine | Type | Latency | Model |
+|--------|------|---------|-------|
+| **Jev (AI)** | Remote API | ~240ms | TypeSafe System One (`jev-latest`) |
+| **Laya (AI)** | Local inference | ~33ms GPU / ~300ms CPU | Laya English (ModernBERT-large, 421M) |
+
+Both use the same **Choice** and **Score** primitives with identical prompts:
 
 | Primitive | Purpose |
 |-----------|---------|
@@ -97,7 +110,7 @@ The web version reads these environment variables:
 | `NEXT_PUBLIC_WS_PORT` | `8000` | WebSocket port for frontend |
 | `TYPESAFE_API_KEY` | — | TypeSafe API key |
 | `TYPESAFE_API_URL` | — | TypeSafe API endpoint |
-| `TYPESAFE_MODEL` | `jev-latest` | TypeSafe model |
+| `TYPESAFE_MODEL` | `jev-latest` | TypeSafe model (used by Jev AI) |
 
 ## File Structure
 
@@ -108,8 +121,9 @@ typesafe21/
   PLAN_WEB_REDESIGN.md   # Full redesign plan (8 phases)
   main.py                # Terminal entry point
   game.py                # Round logic, dealing, payouts, split handling
-  player.py              # Player classes (Random, BasicStrategy, AI)
-  typesafe_ai.py         # TypeSafe API integration (Choice + Score)
+  player.py              # Player classes (Random, BasicStrategy, AI, Laya)
+  typesafe_ai.py         # TypeSafe API integration (Choice + Score) — used by Jev
+  laya_ai.py             # Local Laya integration (Choice + Score) — used by Laya
   basic_strategy.py      # Basic strategy lookup (displayed for reference)
   cards.py               # Card, Hand, Deck, TrackedDeck
   database.py            # SQLite persistence
@@ -130,6 +144,7 @@ typesafe21/
       game.py
       basic_strategy.py
       typesafe_ai.py
+      laya_ai.py
 
   frontend/              # Next.js 19 + React + Three.js
     src/

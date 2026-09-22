@@ -17,7 +17,7 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
 
   const isActive = state.current_player === player.name;
   const hand = player.hand;
-  const isHuman = player.name === "You";
+  const isAI = player.name === "Jev (AI)" || player.name === "Laya (AI)";
   const cardCount = hand.cards.length;
 
   const cardSize = cardCount <= 2 ? "md" : cardCount <= 4 ? "sm" : "sm";
@@ -33,8 +33,8 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
     >
       <div className="flex items-center gap-2">
         <Badge
-          variant={isHuman ? "default" : "secondary"}
-          className={isHuman ? "bg-accent text-accent-foreground" : ""}
+          variant={isAI ? "default" : "secondary"}
+          className={isAI ? "bg-accent text-accent-foreground" : ""}
         >
           {player.name}
         </Badge>

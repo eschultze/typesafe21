@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from cards import TrackedDeck, Hand, Card
-from player import Player, AIPlayer, BasicStrategyPlayer
+from player import Player, AIPlayer, BasicStrategyPlayer, LayaPlayer
 
 
 @dataclass
@@ -66,7 +66,7 @@ def do_bets(
     deck: TrackedDeck,
 ) -> list[BetInfo]:
     bets: list[BetInfo] = []
-    opponent_balances = [p.balance for p in players if not isinstance(p, AIPlayer)]
+    opponent_balances = [p.balance for p in players if not isinstance(p, (AIPlayer, LayaPlayer))]
 
     for player in players:
         if not player.can_play():
@@ -132,7 +132,7 @@ def play_player_hand(
     decision = ""
     confidence = 0.0
     last_ai_decision = ""
-    needs_extra_args = isinstance(player, (AIPlayer, BasicStrategyPlayer))
+    needs_extra_args = isinstance(player, (AIPlayer, BasicStrategyPlayer, LayaPlayer))
 
     cards_dealt = len(player.hand.cards)
     can_double = cards_dealt == 2
@@ -270,7 +270,7 @@ def settle_round(
         if player.current_bet == 0 and not player.split_hands:
             continue
 
-        is_ai = isinstance(player, (AIPlayer, BasicStrategyPlayer))
+        is_ai = isinstance(player, (AIPlayer, BasicStrategyPlayer, LayaPlayer))
 
         # Settle split hands first
         for split_hand, split_bet, split_dec, split_conf in player.split_hands:

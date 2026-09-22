@@ -178,7 +178,7 @@ export default function SessionDetailPage({
           </div>
 
           {/* ─── Player Stats Summary ─── */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {playerNames.map((name) => {
               const s = data.stats.players[name];
               const winRate = s.total_rounds > 0
@@ -208,10 +208,10 @@ export default function SessionDetailPage({
             </span>
             <div className="flex gap-1 items-end h-32">
               {recentRounds.map((round) => {
-                const humanResult = round.players.find(
-                  (p) => p.player_name === "You"
+                const jevResult = round.players.find(
+                  (p) => p.player_name === "Jev (AI)"
                 );
-                const result = humanResult?.result || "push";
+                const result = jevResult?.result || "push";
                 return (
                   <div
                     key={round.id}
@@ -260,10 +260,10 @@ export default function SessionDetailPage({
             </span>
             <div className="flex gap-1 items-end h-32">
               {recentRounds.map((round) => {
-                const aiResult = round.players.find(
-                  (p) => p.player_name === "You"
+                const jevResult = round.players.find(
+                  (p) => p.player_name === "Jev (AI)"
                 );
-                const decision = aiResult?.decision || "";
+                const decision = jevResult?.decision || "";
                 return (
                   <div
                     key={round.id}

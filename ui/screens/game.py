@@ -12,7 +12,7 @@ from textual.containers import Horizontal, Vertical
 from textual import work
 
 from cards import TrackedDeck, Hand
-from player import RandomPlayer, BasicStrategyPlayer, AIPlayer, STARTING_BALANCE
+from player import RandomPlayer, BasicStrategyPlayer, AIPlayer, LayaPlayer, STARTING_BALANCE
 from database import (
     init_db, create_session, save_round, complete_session,
     get_last_incomplete_session, get_round_count, get_session_stats,
@@ -102,11 +102,11 @@ class GameScreen(Screen):
             self._do_round()
 
     def _init_players(self) -> None:
-        ai_player = AIPlayer()
         self.players = [
             RandomPlayer("Random"),
             BasicStrategyPlayer("Basic"),
-            ai_player,
+            AIPlayer("Jev (AI)"),
+            LayaPlayer("Laya (AI)"),
         ]
         self.deck = TrackedDeck(num_decks=6)
         self._refresh_panels()
@@ -115,11 +115,11 @@ class GameScreen(Screen):
         self.session_id = create_session()
         self.round_number = 1
         self.deck = TrackedDeck(num_decks=6)
-        ai_player = AIPlayer()
         self.players = [
             RandomPlayer("Random"),
             BasicStrategyPlayer("Basic"),
-            ai_player,
+            AIPlayer("Jev (AI)"),
+            LayaPlayer("Laya (AI)"),
         ]
         self._refresh_panels()
 
@@ -191,11 +191,12 @@ class GameScreen(Screen):
             self._finish_session()
             return
 
-        ai_player = next((p for p in self.players if isinstance(p, AIPlayer)), None)
-        if ai_player and not ai_player.can_play():
-            self.notify(f"{ai_player.name} is out of money!", severity="warning")
-            self._finish_session()
-            return
+        ai_players = [p for p in self.players if isinstance(p, (AIPlayer, LayaPlayer))]
+        for ai_p in ai_players:
+            if not ai_p.can_play():
+                self.notify(f"{ai_p.name} is out of money!", severity="warning")
+                self._finish_session()
+                return
 
         self.state = GameState.BETTING
         self._update_controls()
@@ -264,7 +265,7 @@ class GameScreen(Screen):
             self.state = GameState.PLAYER_TURNS
             self._update_controls()
 
-            is_ai = isinstance(player, AIPlayer)
+            is_ai = isinstance(player, (AIPlayer, LayaPlayer))
             if is_ai:
                 player_status_lines.append(f"Player {i+1} ({player.name}): [cyan]Consulting AI...[/]")
                 players_p.query_one("#players-content").update(
@@ -336,13 +337,13 @@ class GameScreen(Screen):
         score = self.query_one("#scoreboard-panel", ScoreboardPanel)
         score.update_balances(self.players)
 
-        # Update balance chart
-        ai_player = next((p for p in self.players if isinstance(p, AIPlayer)), None)
-        if ai_player:
+        # Update balance chart (show Jev AI)
+        jev_player = next((p for p in self.players if isinstance(p, AIPlayer)), None)
+        if jev_player:
             chart = self.query_one("#balance-chart", BalanceChartPanel)
-            chart.update_chart(ai_player)
+            chart.update_chart(jev_player)
 
-        # Play cash register sound on AI win
+        # Play cash register sound on AI win (either AI)
         ai_won = any(h.is_ai and h.result == "win" for h in result.hands)
         if ai_won:
             subprocess.Popen(["afplay", "cash_register.mp3"],

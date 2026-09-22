@@ -3,22 +3,16 @@
 import { motion } from "motion/react";
 import { useGameStore } from "@/stores/gameStore";
 
-export function BalanceChart() {
-  const players = useGameStore((s) => s.state.players);
-
-  if (players.length === 0) return null;
-
-  const aiPlayer = players.find((p) => p.name === "AI");
-  if (!aiPlayer || aiPlayer.balance_history.length < 2) return null;
-
-  const history = aiPlayer.balance_history;
-  const maxVal = Math.max(...history, 100);
-  const minVal = Math.min(...history, 50);
-  const range = maxVal - minVal || 1;
+function ChartLine({ history, label }: { history: number[]; label: string }) {
+  if (history.length < 2) return null;
 
   const width = 200;
   const height = 60;
   const padding = 4;
+
+  const minVal = Math.min(...history, 50);
+  const maxVal = Math.max(...history, 100);
+  const range = maxVal - minVal || 1;
 
   const points = history.map((val, i) => {
     const x = padding + (i / Math.max(history.length - 1, 1)) * (width - padding * 2);
@@ -30,21 +24,22 @@ export function BalanceChart() {
   const areaD = `${pathD} L ${width - padding},${height - padding} L ${padding},${height - padding} Z`;
 
   const startingBalance = history[0] ?? 100;
-  const profit = aiPlayer.balance - startingBalance;
+  const currentBalance = history[history.length - 1];
+  const profit = currentBalance - startingBalance;
 
   const strokeColor = profit >= 0 ? "var(--color-profit)" : "var(--color-loss)";
 
   return (
     <div className="flex flex-col items-center p-3 rounded-[10px] bg-card border border-border">
-      <span className="text-xs text-muted-foreground mb-1">AI Balance</span>
+      <span className="text-xs text-muted-foreground mb-1">{label}</span>
       <svg width={width} height={height} className="overflow-visible">
         <defs>
-          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`chartGrad-${label}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={strokeColor} stopOpacity="0.3" />
             <stop offset="100%" stopColor={strokeColor} stopOpacity="0" />
           </linearGradient>
         </defs>
-        <path d={areaD} fill="url(#chartGrad)" />
+        <path d={areaD} fill={`url(#chartGrad-${label})`} />
         <motion.path
           d={pathD}
           fill="none"
@@ -65,6 +60,26 @@ export function BalanceChart() {
           strokeDasharray="4 4"
         />
       </svg>
+    </div>
+  );
+}
+
+export function BalanceChart() {
+  const players = useGameStore((s) => s.state.players);
+
+  if (players.length === 0) return null;
+
+  const jevPlayer = players.find((p) => p.name === "Jev (AI)");
+  const layaPlayer = players.find((p) => p.name === "Laya (AI)");
+
+  return (
+    <div className="grid grid-cols-2 gap-2 w-full">
+      {jevPlayer && jevPlayer.balance_history.length >= 2 && (
+        <ChartLine history={jevPlayer.balance_history} label="Jev Balance" />
+      )}
+      {layaPlayer && layaPlayer.balance_history.length >= 2 && (
+        <ChartLine history={layaPlayer.balance_history} label="Laya Balance" />
+      )}
     </div>
   );
 }

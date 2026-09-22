@@ -59,7 +59,7 @@ export function Scoreboard() {
   if (players.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-3 gap-2 md:gap-3 w-full">
+    <div className="grid grid-cols-2 gap-2 md:gap-3 w-full">
       {players.map((p) => {
         const startingBalance = p.balance_history[0] ?? 100;
         const profit = p.balance - startingBalance;

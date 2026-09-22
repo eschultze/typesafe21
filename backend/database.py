@@ -201,7 +201,7 @@ def get_top_single_turn_profits() -> list[dict]:
                 FROM player_rounds pr
                 JOIN rounds r ON pr.round_id = r.id
                 JOIN sessions s ON s.id = r.session_id
-                WHERE pr.player_name = 'You'
+                WHERE pr.player_name IN ('Jev (AI)', 'Laya (AI)')
                     AND s.is_complete = 1
             )
             SELECT
@@ -235,7 +235,7 @@ def get_top_session_profits() -> list[dict]:
                 FROM player_rounds pr
                 JOIN rounds r ON pr.round_id = r.id
                 JOIN sessions s ON s.id = r.session_id
-                WHERE pr.player_name = 'You'
+                WHERE pr.player_name IN ('Jev (AI)', 'Laya (AI)')
                     AND s.is_complete = 1
             )
             SELECT

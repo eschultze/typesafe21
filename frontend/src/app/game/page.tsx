@@ -54,7 +54,7 @@ export default function GameBoard() {
               <DealerHand />
             </section>
             <div className="w-full h-px bg-border" />
-            <section className="grid grid-cols-1 gap-4 w-full">
+            <section className="grid grid-cols-2 gap-4 w-full">
               {players.map((_p, i) => (
                 <PlayerHand key={i} playerIndex={i} />
               ))}
@@ -85,8 +85,8 @@ export default function GameBoard() {
             {/* Divider */}
             <div className="w-full h-px bg-border" />
 
-            {/* Players — equal widths */}
-            <section className="grid grid-cols-3 gap-4 w-full">
+            {/* Players — 2x2 grid */}
+            <section className="grid grid-cols-2 gap-4 w-full">
               {players.map((_p, i) => (
                 <PlayerHand key={i} playerIndex={i} />
               ))}

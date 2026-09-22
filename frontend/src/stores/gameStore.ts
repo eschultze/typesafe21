@@ -54,8 +54,10 @@ interface GameStore {
   game_id: string;
   state: GameState;
   ws: WebSocket | null;
-  ai_bet_history: number[];
-  ai_confidence_history: number[];
+  jev_bet_history: number[];
+  jev_confidence_history: number[];
+  laya_bet_history: number[];
+  laya_confidence_history: number[];
   prev_bets: number[];
   chipsAnimating: boolean;
 
@@ -87,8 +89,10 @@ export const useGameStore = create<GameStore>()(
       game_id: "default",
       state: defaultState,
       ws: null,
-      ai_bet_history: [],
-      ai_confidence_history: [],
+      jev_bet_history: [],
+      jev_confidence_history: [],
+      laya_bet_history: [],
+      laya_confidence_history: [],
       prev_bets: [],
       chipsAnimating: false,
 
@@ -103,8 +107,10 @@ export const useGameStore = create<GameStore>()(
 
         // Detect new game (round_number resets to 0 after being > 0)
         if (state.round_number === 0 && prev.round_number > 0) {
-          updates.ai_bet_history = [];
-          updates.ai_confidence_history = [];
+          updates.jev_bet_history = [];
+          updates.jev_confidence_history = [];
+          updates.laya_bet_history = [];
+          updates.laya_confidence_history = [];
         }
 
         // Detect bet changes → trigger chip animation
@@ -134,14 +140,24 @@ export const useGameStore = create<GameStore>()(
           state.round_number > prev.round_number
         ) {
           const result = lastAction.result;
-          const aiHand = result.hands?.find(
-            (h: any) => h.name === "You"
+          const jevHand = result.hands?.find(
+            (h: any) => h.name === "Jev (AI)"
           );
-          if (aiHand) {
-            updates.ai_bet_history = [...get().ai_bet_history, aiHand.bet];
-            updates.ai_confidence_history = [
-              ...get().ai_confidence_history,
-              aiHand.confidence,
+          const layaHand = result.hands?.find(
+            (h: any) => h.name === "Laya (AI)"
+          );
+          if (jevHand) {
+            updates.jev_bet_history = [...get().jev_bet_history, jevHand.bet];
+            updates.jev_confidence_history = [
+              ...get().jev_confidence_history,
+              jevHand.confidence,
+            ];
+          }
+          if (layaHand) {
+            updates.laya_bet_history = [...get().laya_bet_history, layaHand.bet];
+            updates.laya_confidence_history = [
+              ...get().laya_confidence_history,
+              layaHand.confidence,
             ];
           }
         }
