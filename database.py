@@ -8,8 +8,9 @@ DB_PATH = Path(__file__).parent / "game_history.db"
 
 @contextmanager
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
         yield conn
     finally:
@@ -19,6 +20,8 @@ def get_connection():
 def init_db():
     with get_connection() as conn:
         cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.execute("PRAGMA journal_mode = WAL")
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
@@ -52,6 +55,10 @@ def init_db():
                 balance_after INTEGER
             )
         """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_rounds_session ON rounds(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_rounds_round ON player_rounds(round_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_rounds_name ON player_rounds(player_name)")
 
         conn.commit()
 
@@ -192,6 +199,74 @@ def get_all_sessions() -> list[dict]:
         )
         sessions = [dict(row) for row in cursor.fetchall()]
         return sessions
+
+
+def get_top_single_turn_profits() -> list[dict]:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            WITH you_rounds AS (
+                SELECT
+                    r.session_id,
+                    r.round_number,
+                    pr.bet,
+                    pr.result,
+                    pr.balance_after,
+                    LAG(pr.balance_after) OVER (
+                        PARTITION BY r.session_id, pr.player_name ORDER BY r.round_number
+                    ) AS prev_balance
+                FROM player_rounds pr
+                JOIN rounds r ON pr.round_id = r.id
+                JOIN sessions s ON s.id = r.session_id
+                WHERE pr.player_name IN ('Jev (AI)', 'Laya (AI)')
+                    AND s.is_complete = 1
+            )
+            SELECT
+                session_id,
+                round_number,
+                bet,
+                result,
+                balance_after,
+                COALESCE(prev_balance, 100) AS prev_balance,
+                balance_after - COALESCE(prev_balance, 100) AS profit
+            FROM you_rounds
+            WHERE prev_balance IS NOT NULL
+            ORDER BY profit DESC
+            LIMIT 5
+        """)
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_top_session_profits() -> list[dict]:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            WITH you_last AS (
+                SELECT
+                    r.session_id,
+                    pr.balance_after AS final_balance,
+                    s.total_rounds,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY r.session_id, pr.player_name ORDER BY r.round_number DESC
+                    ) AS rn
+                FROM player_rounds pr
+                JOIN rounds r ON pr.round_id = r.id
+                JOIN sessions s ON s.id = r.session_id
+                WHERE pr.player_name IN ('Jev (AI)', 'Laya (AI)')
+                    AND s.is_complete = 1
+            )
+            SELECT
+                session_id,
+                final_balance,
+                final_balance - 100 AS profit,
+                ROUND((final_balance - 100.0) / 100.0 * 100, 1) AS pct,
+                total_rounds
+            FROM you_last
+            WHERE rn = 1
+            ORDER BY profit DESC
+            LIMIT 5
+        """)
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_session_rounds(session_id: int) -> list[dict]:

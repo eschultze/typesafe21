@@ -160,9 +160,9 @@ class TrackedDeck:
         return 0
 
     @property
-    def true_count(self) -> int:
+    def true_count(self) -> float:
         decks_remaining = max(1, len(self.cards) / 52)
-        return round(self.running_count / decks_remaining)
+        return round(self.running_count / decks_remaining, 1)
 
     @property
     def remaining(self) -> int:

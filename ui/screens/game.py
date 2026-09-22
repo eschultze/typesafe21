@@ -11,14 +11,14 @@ from textual.widgets import Header, Footer, Static, Input
 from textual.containers import Horizontal, Vertical
 from textual import work
 
-from cards import TrackedDeck, Hand
-from player import RandomPlayer, BasicStrategyPlayer, AIPlayer, LayaPlayer, STARTING_BALANCE
+from rules.cards import TrackedDeck, Hand
+from rules.player import RandomPlayer, BasicStrategyPlayer, AIPlayer, LayaPlayer, STARTING_BALANCE
 from database import (
     init_db, create_session, save_round, complete_session,
     get_last_incomplete_session, get_round_count, get_session_stats,
 )
-from typesafe_ai import get_ai_decision, get_ai_bet
-from game import (
+from rules.typesafe_ai import get_ai_decision, get_ai_bet
+from rules.game import (
     BetInfo, PlayerHandResult, RoundResult,
     do_bets, deal_initial, play_player_hand, play_dealer, settle_round,
 )

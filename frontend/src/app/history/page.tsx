@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Nav } from "@/components/Nav";
 
 interface Session {
   id: number;
@@ -42,24 +43,11 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* ─── Nav ─── */}
-      <nav className="w-full border-b-2 border-border px-[var(--space-lg)] py-3 flex items-center justify-between">
-        <span className="font-bold text-sm tracking-[0.16em] uppercase text-foreground">
-          Typesafe 21
-        </span>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <Link href="/history" className="text-foreground font-medium hover:text-accent transition-colors">
-            History
-          </Link>
-          <Link href="/game" className="hover:text-foreground transition-colors">
-            Play
-          </Link>
-        </div>
-      </nav>
+      <Nav />
 
       {/* ─── Content ─── */}
       <main className="flex-1 px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-2xl)] max-w-[76rem] mx-auto w-full">
-        <h1 className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground mb-[var(--space-xl)]">
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight text-foreground mb-[var(--space-xl)]">
           Session History
         </h1>
 
@@ -82,7 +70,7 @@ export default function HistoryPage() {
             </p>
             <Link
               href="/game"
-              className="inline-flex items-center gap-2 text-foreground font-medium text-[var(--text-md)] hover:text-accent transition-colors group mt-4"
+              className="inline-flex items-center gap-2 text-foreground font-medium text-base hover:text-accent transition-colors group mt-4"
             >
               Start Playing
               <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>

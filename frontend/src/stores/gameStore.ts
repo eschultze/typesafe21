@@ -35,15 +35,38 @@ export interface ShoeData {
   played_ranks: Record<string, number>;
 }
 
+export type GamePhase = "idle" | "betting" | "dealing" | "player_turn" | "dealer_turn" | "results";
+
+export interface LastAction {
+  type: string;
+  player?: string;
+  action?: string;
+  result?: {
+    hands?: Array<{
+      hand: string[];
+      result: string;
+      payout: number;
+      name: string;
+      bet: number;
+      confidence: number;
+      is_ai?: boolean;
+      decision?: string;
+    }>;
+    [key: string]: unknown;
+  };
+  round_number?: number;
+  [key: string]: unknown;
+}
+
 export interface GameState {
-  phase: string;
+  phase: GamePhase;
   round_number: number;
   players: PlayerData[];
   dealer: HandData | null;
   dealer_hidden: boolean;
   shoe: ShoeData;
   current_player: string | null;
-  last_action: any;
+  last_action: LastAction | null;
   session_id: number | null;
   auto_play: boolean;
   auto_play_delay_ms: number;
@@ -54,10 +77,7 @@ interface GameStore {
   game_id: string;
   state: GameState;
   ws: WebSocket | null;
-  jev_bet_history: number[];
-  jev_confidence_history: number[];
-  laya_bet_history: number[];
-  laya_confidence_history: number[];
+  player_histories: Record<string, { bets: number[]; confidences: number[] }>;
   prev_bets: number[];
   chipsAnimating: boolean;
 
@@ -65,7 +85,7 @@ interface GameStore {
   setWebSocket: (ws: WebSocket | null) => void;
   setGameId: (id: string) => void;
   updateState: (state: GameState) => void;
-  sendAction: (action: string, data?: Record<string, any>) => void;
+  sendAction: (action: string, data?: Record<string, unknown>) => void;
 }
 
 const defaultState: GameState = {
@@ -89,10 +109,7 @@ export const useGameStore = create<GameStore>()(
       game_id: "default",
       state: defaultState,
       ws: null,
-      jev_bet_history: [],
-      jev_confidence_history: [],
-      laya_bet_history: [],
-      laya_confidence_history: [],
+      player_histories: {},
       prev_bets: [],
       chipsAnimating: false,
 
@@ -107,10 +124,7 @@ export const useGameStore = create<GameStore>()(
 
         // Detect new game (round_number resets to 0 after being > 0)
         if (state.round_number === 0 && prev.round_number > 0) {
-          updates.jev_bet_history = [];
-          updates.jev_confidence_history = [];
-          updates.laya_bet_history = [];
-          updates.laya_confidence_history = [];
+          updates.player_histories = {};
         }
 
         // Detect bet changes → trigger chip animation
@@ -140,26 +154,16 @@ export const useGameStore = create<GameStore>()(
           state.round_number > prev.round_number
         ) {
           const result = lastAction.result;
-          const jevHand = result.hands?.find(
-            (h: any) => h.name === "Jev (AI)"
-          );
-          const layaHand = result.hands?.find(
-            (h: any) => h.name === "Laya (AI)"
-          );
-          if (jevHand) {
-            updates.jev_bet_history = [...get().jev_bet_history, jevHand.bet];
-            updates.jev_confidence_history = [
-              ...get().jev_confidence_history,
-              jevHand.confidence,
-            ];
+          const histories = { ...get().player_histories };
+          for (const h of result?.hands ?? []) {
+            const name = h.name as string;
+            if (!histories[name]) {
+              histories[name] = { bets: [], confidences: [] };
+            }
+            histories[name].bets.push(h.bet);
+            histories[name].confidences.push(h.confidence);
           }
-          if (layaHand) {
-            updates.laya_bet_history = [...get().laya_bet_history, layaHand.bet];
-            updates.laya_confidence_history = [
-              ...get().laya_confidence_history,
-              layaHand.confidence,
-            ];
-          }
+          updates.player_histories = histories;
         }
 
         set(updates);

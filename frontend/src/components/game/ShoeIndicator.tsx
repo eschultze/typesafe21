@@ -26,7 +26,7 @@ export function ShoeIndicator() {
           variant={shoe.true_count > 0 ? "default" : shoe.true_count < 0 ? "destructive" : "secondary"}
           className={`text-xs tabular-nums ${shoe.true_count > 0 ? "bg-accent/20 text-accent" : ""}`}
         >
-          {shoe.true_count > 0 ? "+" : ""}{shoe.true_count}
+          {shoe.true_count > 0 ? "+" : ""}{shoe.true_count.toFixed(1)}
         </Badge>
       </div>
     </div>

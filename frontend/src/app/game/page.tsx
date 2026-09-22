@@ -14,7 +14,6 @@ import { WinSound } from "@/components/game/WinSound";
 import { StatsPanel } from "@/components/game/StatsPanel";
 import { CardTracker } from "@/components/game/CardTracker";
 import { Leaderboard } from "@/components/game/Leaderboard";
-import { ChipScene } from "@/components/game/ChipScene";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "motion/react";
 
@@ -55,11 +54,10 @@ export default function GameBoard() {
             </section>
             <div className="w-full h-px bg-border" />
             <section className="grid grid-cols-2 gap-4 w-full">
-              {players.map((_p, i) => (
-                <PlayerHand key={i} playerIndex={i} />
+              {players.map((p, i) => (
+                <PlayerHand key={p.name} playerIndex={i} />
               ))}
             </section>
-            <ChipScene />
             <div className="w-full h-px bg-border" />
             <LastAction />
             <Scoreboard />
@@ -86,13 +84,10 @@ export default function GameBoard() {
 
             {/* Players — 2x2 grid */}
             <section className="grid grid-cols-2 gap-4 w-full">
-              {players.map((_p, i) => (
-                <PlayerHand key={i} playerIndex={i} />
+              {players.map((p, i) => (
+                <PlayerHand key={p.name} playerIndex={i} />
               ))}
             </section>
-
-            {/* Chip Stacks */}
-            <ChipScene />
 
             {/* Divider */}
             <div className="w-full h-px bg-border" />

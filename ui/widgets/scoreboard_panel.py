@@ -3,7 +3,7 @@ from __future__ import annotations
 from textual.widget import Widget
 from textual.widgets import Static
 
-from player import Player, STARTING_BALANCE
+from rules.player import Player, STARTING_BALANCE
 
 
 class ScoreboardPanel(Widget):

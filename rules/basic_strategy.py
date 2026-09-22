@@ -115,7 +115,7 @@ def _is_pair(hand) -> bool:
     cards = hand.cards if hasattr(hand, 'cards') else hand
     if len(cards) != 2:
         return False
-    return _card_value(cards[0]) == _card_value(cards[1])
+    return cards[0].rank == cards[1].rank
 
 
 def _dealer_upcard_value(dealer_hand) -> int:

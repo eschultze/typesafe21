@@ -3,7 +3,7 @@ from __future__ import annotations
 from textual.widget import Widget
 from textual.widgets import Static
 
-from cards import TrackedDeck
+from rules.cards import TrackedDeck
 
 
 class DeckPanel(Widget):

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from cards import Card, Suit
+from rules.cards import Card, Suit
 
 
 # Face-down card (back)

@@ -2,8 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKEND_DIR="$ROOT_DIR/backend"
-FRONTEND_DIR="$ROOT_DIR/frontend"
 
 cleanup() {
   echo ""
@@ -26,13 +24,15 @@ PIDS=()
 
 # Start backend
 echo "Starting backend on :8000 ..."
-(cd "$BACKEND_DIR" && source venv/bin/activate && exec python main.py) &
+(cd "$ROOT_DIR" && exec uv run uvicorn web_main:app --host 0.0.0.0 --port 8000 --reload) > /tmp/backend.log 2>&1 &
 PIDS+=($!)
 
 # Start frontend
 echo "Starting frontend on :3000 ..."
-(cd "$FRONTEND_DIR" && exec npm run dev) &
+(cd "$ROOT_DIR/frontend" && exec npm run dev) > /tmp/frontend.log 2>&1 &
 PIDS+=($!)
+
+echo "  Logs: /tmp/backend.log /tmp/frontend.log"
 
 echo ""
 echo "  Frontend: http://localhost:3000"

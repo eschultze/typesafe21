@@ -10,8 +10,8 @@ function ScoreLine({ history }: { history: number[] }) {
   const h = 60;
   const pad = 4;
 
-  const min = Math.min(...history);
-  const max = Math.max(...history);
+  const min = history.length > 0 ? Math.min(...history.slice(-500)) : 0;
+  const max = history.length > 0 ? Math.max(...history.slice(-500)) : 100;
   const range = max - min || 1;
 
   const points = history.map((v, i) => {
@@ -20,7 +20,7 @@ function ScoreLine({ history }: { history: number[] }) {
     return `${x},${y}`;
   });
 
-  const profit = history[history.length - 1] >= (history[0] ?? 100);
+  const profit = history[history.length - 1] >= history[0];
   const color = profit ? "var(--color-profit)" : "var(--color-loss)";
 
   return (

@@ -10,15 +10,19 @@ export function useGameSocket(gameId: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closedRef = useRef(false);
   const { setConnected, setWebSocket, updateState } = useGameStore();
 
   useEffect(() => {
     function connect() {
+      // Next.js rewrites (rewrites in next.config) don't proxy WebSocket
+      // connections, so we must connect directly to the backend.
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsHost = process.env.NEXT_PUBLIC_WS_HOST || window.location.hostname;
       const wsPort = process.env.NEXT_PUBLIC_WS_PORT || "8000";
       const wsUrl = `${protocol}//${wsHost}:${wsPort}/ws/${gameId}`;
 
+      closedRef.current = false;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -40,6 +44,7 @@ export function useGameSocket(gameId: string) {
       };
 
       ws.onclose = () => {
+        if (closedRef.current) return;
         setConnected(false);
         setWebSocket(null);
         scheduleReconnect();
@@ -62,6 +67,7 @@ export function useGameSocket(gameId: string) {
     connect();
 
     return () => {
+      closedRef.current = true;
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current);
         reconnectTimer.current = null;

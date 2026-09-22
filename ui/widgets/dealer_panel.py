@@ -3,7 +3,7 @@ from __future__ import annotations
 from textual.widget import Widget
 from textual.widgets import Static
 
-from cards import Hand
+from rules.cards import Hand
 from ui.widgets.card_art import render_card, render_hand_cards, BACK
 
 

@@ -41,15 +41,15 @@ function StatsCard({ label, betHistory, confidenceHistory }: { label: string; be
 }
 
 export function StatsPanel() {
-  const jevBetHistory = useGameStore((s) => s.jev_bet_history);
-  const jevConfidenceHistory = useGameStore((s) => s.jev_confidence_history);
-  const layaBetHistory = useGameStore((s) => s.laya_bet_history);
-  const layaConfidenceHistory = useGameStore((s) => s.laya_confidence_history);
+  const histories = useGameStore((s) => s.player_histories);
+
+  const jev = histories["Jev (AI)"] ?? { bets: [], confidences: [] };
+  const laya = histories["Laya (AI)"] ?? { bets: [], confidences: [] };
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      <StatsCard label="Jev" betHistory={jevBetHistory} confidenceHistory={jevConfidenceHistory} />
-      <StatsCard label="Laya" betHistory={layaBetHistory} confidenceHistory={layaConfidenceHistory} />
+      <StatsCard label="Jev" betHistory={jev.bets} confidenceHistory={jev.confidences} />
+      <StatsCard label="Laya" betHistory={laya.bets} confidenceHistory={laya.confidences} />
     </div>
   );
 }

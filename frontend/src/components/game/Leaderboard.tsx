@@ -25,20 +25,19 @@ interface LeaderboardData {
 
 export function Leaderboard() {
   const [data, setData] = useState<LeaderboardData | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     async function fetchLeaderboard() {
       try {
-        const apiHost = process.env.NEXT_PUBLIC_API_HOST || window.location.hostname;
-        const apiPort = process.env.NEXT_PUBLIC_API_PORT || "8000";
-        const res = await fetch(`http://${apiHost}:${apiPort}/api/leaderboard`);
+        const res = await fetch("/api/leaderboard");
         if (res.ok && active) {
           setData(await res.json());
         }
       } catch {
-        // server may be down
+        if (active) setError(true);
       }
     }
 
@@ -50,6 +49,7 @@ export function Leaderboard() {
     };
   }, []);
 
+  if (error) return null;
   if (!data) return null;
 
   const hasSingleTurn = data.single_turn.length > 0;

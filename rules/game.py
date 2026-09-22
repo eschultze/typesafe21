@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from cards import TrackedDeck, Hand, Card
-from player import Player, AIPlayer, BasicStrategyPlayer, LayaPlayer
+from rules.cards import TrackedDeck, Hand, Card
+from rules.player import Player, AIPlayer, BasicStrategyPlayer, LayaPlayer
 
 
 @dataclass
@@ -66,6 +66,8 @@ def do_bets(
     deck: TrackedDeck,
 ) -> list[BetInfo]:
     bets: list[BetInfo] = []
+    # Exclude AI players from opponent balances; BasicStrategyPlayer is included
+    # as it represents a human-like opponent for bet sizing context.
     opponent_balances = [p.balance for p in players if not isinstance(p, (AIPlayer, LayaPlayer))]
 
     for player in players:
@@ -81,7 +83,7 @@ def do_bets(
         info = BetInfo(
             name=player.name,
             bet=bet,
-            is_ai=isinstance(player, AIPlayer),
+            is_ai=isinstance(player, (AIPlayer, LayaPlayer)),
         )
         if isinstance(player, AIPlayer):
             bet_info = player.last_bet_info
@@ -103,7 +105,6 @@ def deal_initial(
         p.reset_hand()
     dealer_hand.clear()
 
-    # Deal one shared hand, then copy it to all players
     shared_cards: list[Card] = []
     for _ in range(2):
         card = deck.deal()
@@ -115,7 +116,6 @@ def deal_initial(
             for card in shared_cards:
                 p.hand.add_card(Card(card.rank, card.suit))
 
-    # Dealer gets their own cards
     for _ in range(2):
         card = deck.deal()
         dealer_hand.add_card(card)
@@ -169,43 +169,39 @@ def play_player_hand(
             deck.record_played(card)
             break
         elif decision == "split" and can_split:
-            # Split: create two hands, play each independently
             card1 = player.hand.cards[0]
             card2 = player.hand.cards[1]
             original_bet = player.current_bet
             splitting_aces = card1.rank == "A"
 
-            # Create first hand
             hand1 = Hand()
             hand1.add_card(card1)
             card = deck.deal()
             hand1.add_card(card)
             deck.record_played(card)
 
-            # Create second hand
             hand2 = Hand()
             hand2.add_card(card2)
             card = deck.deal()
             hand2.add_card(card)
             deck.record_played(card)
 
-            # Play first hand
             player.hand = hand1
             player.current_bet = original_bet
             if splitting_aces:
-                # Split Aces get only one card each, stand immediately
                 decision1, conf1, dec1 = "", 0.0, ""
             else:
                 decision1, conf1, dec1 = _play_hand_loop(player, deck, dealer_hand, needs_extra_args)
             player.split_hands.append((hand1, original_bet, dec1, conf1))
 
-            # Play second hand (return this one)
             player.hand = hand2
             player.current_bet = original_bet
             if splitting_aces:
                 decision2, conf2, dec2 = "", 0.0, ""
             else:
                 decision2, conf2, dec2 = _play_hand_loop(player, deck, dealer_hand, needs_extra_args)
+            player.split_hands.append((hand2, original_bet, dec2, conf2))
+            player.hand = Hand()
             return decision2, conf2, dec2
         else:
             break
@@ -219,11 +215,11 @@ def _play_hand_loop(
     dealer_hand: Hand,
     needs_extra_args: bool,
 ) -> tuple[str, float, str]:
-    """Play out a single hand to completion (used for split hands)."""
     decision = ""
     confidence = 0.0
     last_ai_decision = ""
 
+    # After split: no double-down allowed on split hands, no re-splitting.
     while True:
         if player.hand.value >= 21:
             break
@@ -248,7 +244,7 @@ def _play_hand_loop(
 
 
 def play_dealer(dealer_hand: Hand, deck: TrackedDeck) -> None:
-    while dealer_hand.value < 17:
+    while dealer_hand.value < 17 or (dealer_hand.value == 17 and dealer_hand.is_soft):
         card = deck.deal()
         dealer_hand.add_card(card)
         deck.record_played(card)
@@ -270,29 +266,31 @@ def settle_round(
         if player.current_bet == 0 and not player.split_hands:
             continue
 
-        is_ai = isinstance(player, (AIPlayer, BasicStrategyPlayer, LayaPlayer))
+        is_ai = isinstance(player, (AIPlayer, LayaPlayer))
+        had_hands = False
 
-        # Settle split hands first
         for split_hand, split_bet, split_dec, split_conf in player.split_hands:
-            # Temporarily set player hand/bet for settlement
             orig_hand = player.hand
             orig_bet = player.current_bet
             player.hand = split_hand
             player.current_bet = split_bet
+            had_hands = True
 
             winner = determine_winner(split_hand, dealer_hand)
             multiplier = get_payout_multiplier(winner, split_hand)
-            player.record_result(winner)
 
             if winner == "win":
+                player.wins += 1
                 player.win_bet(multiplier)
             elif winner == "push":
+                player.pushes += 1
                 player.push_bet()
             else:
+                player.losses += 1
                 player.lose_bet()
 
             hand_result = PlayerHandResult(
-                player_index=i + 1,
+                player_index=i,
                 name=player.name,
                 hand=split_hand,
                 result=winner,
@@ -304,28 +302,29 @@ def settle_round(
             )
             result.hands.append(hand_result)
 
-            # Restore original hand/bet
             player.hand = orig_hand
             player.current_bet = orig_bet
 
-        # Settle main hand (if any bet remains)
         if player.current_bet > 0:
+            had_hands = True
             winner = determine_winner(player.hand, dealer_hand)
             multiplier = get_payout_multiplier(winner, player.hand)
-            player.record_result(winner)
 
             if winner == "win":
+                player.wins += 1
                 player.win_bet(multiplier)
             elif winner == "push":
+                player.pushes += 1
                 player.push_bet()
             else:
+                player.losses += 1
                 player.lose_bet()
 
             conf = player.last_confidence if is_ai else 0.0
             dec = player.last_decision if is_ai else ""
 
             hand_result = PlayerHandResult(
-                player_index=i + 1,
+                player_index=i,
                 name=player.name,
                 hand=player.hand,
                 result=winner,
@@ -340,5 +339,8 @@ def settle_round(
             if is_ai:
                 result.ai_confidence = conf
                 result.ai_decision = dec
+
+        if had_hands:
+            player.balance_history.append(player.balance)
 
     return result

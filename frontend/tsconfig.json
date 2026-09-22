@@ -27,7 +27,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
+    ".next/dev/types/**/*.ts", // Next.js 16 dev-mode generated types
     "**/*.mts"
   ],
   "exclude": ["node_modules"]

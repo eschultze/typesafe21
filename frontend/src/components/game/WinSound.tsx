@@ -9,13 +9,19 @@ export function WinSound() {
 
   useEffect(() => {
     audioRef.current = new Audio("/cash_register.mp3");
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
     if (!lastAction || lastAction.type !== "round_result") return;
 
     const { result } = lastAction;
-    const anyAIWon = result.hands?.some(
+    const anyAIWon = result?.hands?.some(
       (h: any) => h.is_ai && h.result === "win"
     );
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from textual.widget import Widget
 from textual.widgets import Static, LoadingIndicator
 
-from game import PlayerHandResult
+from rules.game import PlayerHandResult
 from ui.widgets.card_art import render_hand_cards
 
 _SEPARATOR = "[dim]" + "\u2500" * 50 + "[/]"

@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from rules.cards import TrackedDeck, Hand, Card
 from rules.player import RandomPlayer, BasicStrategyPlayer, AIPlayer, LayaPlayer
 from rules.game import do_bets, deal_initial, play_player_hand, play_dealer, settle_round
@@ -47,6 +48,7 @@ class GameSession:
         self.auto_play = False
         self.auto_play_delay_ms = 500
         self._auto_play_task: asyncio.Task | None = None
+        self._auto_play_rounds: int | None = None
 
     def new_game(self):
         self.deck = TrackedDeck(num_decks=6)
@@ -62,13 +64,9 @@ class GameSession:
         return self.get_state()
 
     def continue_game(self):
-        session = db.get_last_incomplete_session()
-        if session:
-            self.session_id = session["id"]
-            self.round_number = db.get_round_count(self.session_id)
-        else:
-            return self.new_game()
-        return self.get_state()
+        # TODO: State restoration is not yet implemented — always start fresh
+        # to prevent silent data corruption from stale session state.
+        return self.new_game()
 
     def get_state(self, reveal_dealer: bool = False) -> dict:
         dealer_dict = self.dealer_hand.to_dict() if self.dealer_hand.cards else None
@@ -107,12 +105,19 @@ class GameSession:
             auto_play_delay_ms=self.auto_play_delay_ms,
         ).model_dump()
 
-    def play_round(self) -> dict:
+    async def play_round(self, broadcast_fn=None) -> dict:
         self.round_number += 1
+
+        # Ensure we have a session to FK into
+        if self.session_id is None:
+            self.session_id = await asyncio.to_thread(db.create_session)
 
         # Bets
         self.phase = "betting"
-        bets = do_bets(self.players, self.deck)
+        if broadcast_fn:
+            await broadcast_fn({"type": "state_update", "state": self.get_state()})
+            await asyncio.sleep(0)
+        bets = await asyncio.to_thread(do_bets, self.players, self.deck)
         bet_results = [BetResult(
             name=b.name, bet=b.bet, is_ai=b.is_ai,
             reasoning=b.reasoning, confidence=b.confidence,
@@ -120,16 +125,34 @@ class GameSession:
 
         # Deal
         self.phase = "dealing"
-        self.dealer_hand = deal_initial(self.players, self.deck)
+        if broadcast_fn:
+            await broadcast_fn({"type": "state_update", "state": self.get_state()})
+            await asyncio.sleep(0)
+        self.dealer_hand = await asyncio.to_thread(deal_initial, self.players, self.deck)
 
         # Player turns
         self.phase = "player_turn"
+        if broadcast_fn:
+            await broadcast_fn({"type": "state_update", "state": self.get_state()})
+            await asyncio.sleep(0)
         actions = []
         for i, player in enumerate(self.players):
             if player.current_bet == 0:
                 continue
             self.current_player_idx = i
-            decision, confidence, last_ai_decision = play_player_hand(player, self.deck, self.dealer_hand)
+
+            # Broadcast "thinking" state for AI players
+            is_ai = isinstance(player, (AIPlayer, LayaPlayer))
+            if broadcast_fn and is_ai:
+                await broadcast_fn({
+                    "type": "state_update",
+                    "state": self.get_state(),
+                })
+                await asyncio.sleep(0)
+
+            decision, confidence, last_ai_decision = await asyncio.to_thread(
+                play_player_hand, player, self.deck, self.dealer_hand
+            )
             actions.append({
                 "player": player.name,
                 "decision": decision,
@@ -139,11 +162,14 @@ class GameSession:
 
         # Dealer
         self.phase = "dealer_turn"
-        play_dealer(self.dealer_hand, self.deck)
+        if broadcast_fn:
+            await broadcast_fn({"type": "state_update", "state": self.get_state()})
+            await asyncio.sleep(0)
+        await asyncio.to_thread(play_dealer, self.dealer_hand, self.deck)
 
         # Settle
         self.phase = "results"
-        result = settle_round(self.players, self.dealer_hand, self.session_id or 0, self.round_number)
+        result = settle_round(self.players, self.dealer_hand, self.session_id, self.round_number)
 
         # Save to DB
         player_results = []
@@ -157,7 +183,9 @@ class GameSession:
                 "decision": hand_result.decision,
                 "balance_after": hand_result.balance,
             })
-        db.save_round(self.session_id or 0, self.round_number, player_results, self.dealer_hand.value)
+        await asyncio.to_thread(
+            db.save_round, self.session_id, self.round_number, player_results, self.dealer_hand.value
+        )
 
         self.last_action = {
             "type": "round_result",
@@ -192,14 +220,25 @@ class GameSession:
     async def auto_play_loop(self, broadcast_fn):
         count = 0
         max_rounds = self._auto_play_rounds or float("inf")
-        while self.auto_play and count < max_rounds:
-            state = self.play_round()
-            await broadcast_fn({
-                "type": "state_update",
-                "state": state,
-            })
-            count += 1
-            await asyncio.sleep(self.auto_play_delay_ms / 1000)
+        try:
+            while self.auto_play and count < max_rounds:
+                state = await self.play_round(broadcast_fn=broadcast_fn)
+                await broadcast_fn({
+                    "type": "state_update",
+                    "state": state,
+                })
+                count += 1
+                await asyncio.sleep(self.auto_play_delay_ms / 1000)
+        except Exception:
+            traceback.print_exc()
+            self.auto_play = False
+            try:
+                await broadcast_fn({
+                    "type": "state_update",
+                    "state": self.get_state(),
+                })
+            except Exception:
+                pass
         self.auto_play = False
         await broadcast_fn({
             "type": "state_update",

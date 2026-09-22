@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import traceback
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -26,7 +27,6 @@ app = FastAPI(title="TypeSafe21", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -73,8 +73,20 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
         while True:
             raw = await websocket.receive_text()
-            data = json.loads(raw)
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_json({"type": "error", "message": "Invalid JSON"})
+                continue
+
+            if not isinstance(data, dict):
+                await websocket.send_json({"type": "error", "message": "Message must be a JSON object"})
+                continue
+
             action = data.get("action")
+            if not action:
+                await websocket.send_json({"type": "error", "message": "Missing 'action' field"})
+                continue
 
             if action == "new_game":
                 state = session.new_game()
@@ -91,7 +103,12 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                 })
 
             elif action == "play_round":
-                state = session.play_round()
+                if session.phase != "idle":
+                    await websocket.send_json({"type": "error", "message": "Cannot play round: game is not in idle phase"})
+                    continue
+                async def broadcast(msg):
+                    await manager.broadcast(game_id, msg)
+                state = await session.play_round(broadcast_fn=broadcast)
                 await manager.broadcast(game_id, {
                     "type": "state_update",
                     "state": state,
@@ -100,15 +117,20 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
             elif action == "auto_play":
                 enabled = data.get("enabled", True)
                 delay_ms = data.get("delay_ms", 500)
+                delay_ms = max(100, min(delay_ms, 5000))
                 rounds = data.get("rounds")
                 session.set_auto_play(enabled, delay_ms, rounds)
 
                 if enabled:
+                    if session._auto_play_task and not session._auto_play_task.done():
+                        session._auto_play_task.cancel()
                     async def broadcast(msg):
                         await manager.broadcast(game_id, msg)
-                    asyncio.create_task(session.auto_play_loop(broadcast))
+                    session._auto_play_task = asyncio.create_task(session.auto_play_loop(broadcast))
                 else:
                     session.auto_play = False
+                    if session._auto_play_task and not session._auto_play_task.done():
+                        session._auto_play_task.cancel()
 
                 await manager.broadcast(game_id, {
                     "type": "state_update",
@@ -129,10 +151,20 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     "state": session.get_state(),
                 })
 
+            else:
+                await websocket.send_json({"type": "error", "message": f"Unknown action: {action}"})
+
     except WebSocketDisconnect:
+        if session._auto_play_task and not session._auto_play_task.done():
+            session._auto_play_task.cancel()
         manager.disconnect(websocket, game_id)
+        game_manager.remove(game_id)
     except Exception as e:
+        traceback.print_exc()
+        if session._auto_play_task and not session._auto_play_task.done():
+            session._auto_play_task.cancel()
         manager.disconnect(websocket, game_id)
+        game_manager.remove(game_id)
 
 
 if __name__ == "__main__":
@@ -140,6 +172,8 @@ if __name__ == "__main__":
     import sys
     import uvicorn
 
+    # NOTE: signal.signal is platform-limited (Unix only). For production,
+    # use FastAPI's lifespan context manager for graceful shutdown.
     def handle_sigint(sig, frame):
         sys.exit(0)
 

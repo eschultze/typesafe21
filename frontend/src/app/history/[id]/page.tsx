@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { Nav } from "@/components/Nav";
 
 interface PlayerRound {
   player_index: number;
@@ -90,19 +91,7 @@ export default function SessionDetailPage({
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
-        <nav className="w-full border-b-2 border-border px-[var(--space-lg)] py-3 flex items-center justify-between">
-          <span className="font-bold text-sm tracking-[0.16em] uppercase text-foreground">
-            Typesafe 21
-          </span>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/history" className="hover:text-foreground transition-colors">
-              History
-            </Link>
-            <Link href="/game" className="hover:text-foreground transition-colors">
-              Play
-            </Link>
-          </div>
-        </nav>
+        <Nav />
         <main className="flex-1 px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-2xl)] max-w-[76rem] mx-auto w-full">
           <div className="flex flex-col gap-4 max-w-3xl">
             <div className="h-8 w-48 rounded bg-muted animate-pulse" />
@@ -118,19 +107,7 @@ export default function SessionDetailPage({
   if (error || !data) {
     return (
       <div className="min-h-screen flex flex-col">
-        <nav className="w-full border-b-2 border-border px-[var(--space-lg)] py-3 flex items-center justify-between">
-          <span className="font-bold text-sm tracking-[0.16em] uppercase text-foreground">
-            Typesafe 21
-          </span>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/history" className="hover:text-foreground transition-colors">
-              History
-            </Link>
-            <Link href="/game" className="hover:text-foreground transition-colors">
-              Play
-            </Link>
-          </div>
-        </nav>
+        <Nav />
         <main className="flex-1 px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-2xl)] max-w-[76rem] mx-auto w-full">
           <p className="text-[var(--color-destructive)]">Error: {error || "Session not found"}</p>
         </main>
@@ -143,20 +120,7 @@ export default function SessionDetailPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* ─── Nav ─── */}
-      <nav className="w-full border-b-2 border-border px-[var(--space-lg)] py-3 flex items-center justify-between">
-        <span className="font-bold text-sm tracking-[0.16em] uppercase text-foreground">
-          Typesafe 21
-        </span>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <Link href="/history" className="text-foreground font-medium hover:text-accent transition-colors">
-            History
-          </Link>
-          <Link href="/game" className="hover:text-foreground transition-colors">
-            Play
-          </Link>
-        </div>
-      </nav>
+      <Nav />
 
       {/* ─── Content ─── */}
       <main className="flex-1 px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-2xl)] max-w-[76rem] mx-auto w-full">
@@ -169,7 +133,7 @@ export default function SessionDetailPage({
             >
               ← Back
             </Link>
-            <h1 className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground">
+            <h1 className="text-3xl md:text-4xl font-light tracking-tight text-foreground">
               Session #{sessionId}
             </h1>
             <span className="text-sm text-muted-foreground">

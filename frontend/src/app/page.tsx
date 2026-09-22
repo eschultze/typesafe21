@@ -1,7 +1,20 @@
 import Link from "next/link";
 import { HeroScene } from "@/components/game/HeroScene";
+import { Nav } from "@/components/Nav";
 
 const players = [
+  {
+    name: "Random",
+    strategy: "Random hit/stand decisions",
+    bet: "Random flat bets ($10-$30)",
+    accent: false,
+  },
+  {
+    name: "Basic",
+    strategy: "Follows basic strategy (6-deck, dealer stands S17)",
+    bet: "Always minimum bet",
+    accent: false,
+  },
   {
     name: "Jev (AI)",
     strategy: "Remote TypeSafe API — decides everything autonomously",
@@ -14,56 +27,28 @@ const players = [
     bet: "AI-scored, balance-based (% of bankroll)",
     accent: true,
   },
-  {
-    name: "Basic",
-    strategy: "Follows basic strategy (6-deck, dealer stands S17)",
-    bet: "Always minimum bet",
-    accent: false,
-  },
-  {
-    name: "Random",
-    strategy: "Random hit/stand decisions",
-    bet: "Random flat bets ($10-$30)",
-    accent: false,
-  },
 ];
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
-      {/* ─── N7 Brutal Slab Nav ─── */}
-      <nav className="w-full border-b-2 border-border px-[var(--space-lg)] py-3 flex items-center justify-between">
-        <span className="font-bold text-sm tracking-[0.16em] uppercase text-foreground">
-          Typesafe 21
-        </span>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <Link href="/history" className="hover:text-foreground transition-colors">
-            History
-          </Link>
-          <Link
-            href="/game"
-            className="text-foreground font-medium hover:text-accent transition-colors"
-          >
-            Play
-          </Link>
-        </div>
-      </nav>
+      <Nav />
 
       {/* ─── Marquee Hero ─── */}
       <section className="flex-1 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-[var(--space-2xl)] items-center px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-2xl)] max-w-[76rem] mx-auto w-full">
         <div className="flex flex-col gap-[var(--space-lg)]">
-          <h1 className="text-[var(--text-display)] font-light tracking-[var(--tracking-display)] leading-[var(--lh-tight)] text-foreground">
+          <h1 className="text-5xl md:text-7xl font-light tracking-tight leading-tight text-foreground">
             Typesafe
             <br />
             <span className="text-accent">21</span>
           </h1>
-          <p className="text-[var(--text-lg)] text-muted-foreground max-w-[40ch]">
+          <p className="text-lg text-muted-foreground max-w-[40ch]">
             Four players. One shoe. Zero mercy.
           </p>
           <div className="pt-[var(--space-sm)]">
             <Link
               href="/game"
-              className="inline-flex items-center gap-2 text-foreground font-medium text-[var(--text-md)] hover:text-accent transition-colors group"
+              className="inline-flex items-center gap-2 text-foreground font-medium text-base hover:text-accent transition-colors group"
             >
               Play
               <span className="group-hover:translate-x-1 transition-transform">&rarr;</span>
@@ -77,7 +62,7 @@ export default function Home() {
 
       {/* ─── How It Works ─── */}
       <section className="px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-3xl)] max-w-[76rem] mx-auto w-full">
-        <h2 className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground mb-[var(--space-xl)]">
+        <h2 className="text-3xl md:text-4xl font-light tracking-tight text-foreground mb-[var(--space-xl)]">
           How it works
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-[var(--space-lg)]">
@@ -106,7 +91,7 @@ export default function Home() {
 
       {/* ─── AI Primitives ─── */}
       <section className="px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-3xl)] max-w-[76rem] mx-auto w-full">
-        <h2 className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground mb-[var(--space-xl)]">
+        <h2 className="text-3xl md:text-4xl font-light tracking-tight text-foreground mb-[var(--space-xl)]">
           The AI brain
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-[var(--space-lg)]">
@@ -131,7 +116,7 @@ export default function Home() {
 
       {/* ─── Rules ─── */}
       <section className="px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-3xl)] max-w-[76rem] mx-auto w-full">
-        <h2 className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground mb-[var(--space-xl)]">
+        <h2 className="text-3xl md:text-4xl font-light tracking-tight text-foreground mb-[var(--space-xl)]">
           Rules
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-[var(--space-xl)] gap-y-[var(--space-sm)] text-sm text-muted-foreground">
@@ -149,7 +134,7 @@ export default function Home() {
       {/* ─── Ft5 Statement Footer ─── */}
       <footer className="px-[var(--space-lg)] md:px-[var(--space-2xl)] py-[var(--space-3xl)] border-t-2 border-border">
         <div className="max-w-[76rem] mx-auto flex flex-col gap-[var(--space-lg)]">
-          <p className="text-[var(--text-display-s)] font-light tracking-[var(--tracking-tight)] text-foreground max-w-[38ch]">
+          <p className="text-3xl md:text-4xl font-light tracking-tight text-foreground max-w-[38ch]">
             The AI always wins. Sometimes.
           </p>
           <div className="flex items-center gap-6 text-xs text-muted-foreground">

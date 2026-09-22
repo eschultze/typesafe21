@@ -10,8 +10,8 @@ function ChartLine({ history, label }: { history: number[]; label: string }) {
   const height = 60;
   const padding = 4;
 
-  const minVal = Math.min(...history, 50);
-  const maxVal = Math.max(...history, 100);
+  const minVal = history.length > 0 ? Math.min(...history.slice(-500), 50) : 0;
+  const maxVal = history.length > 0 ? Math.max(...history.slice(-500), 100) : 100;
   const range = maxVal - minVal || 1;
 
   const points = history.map((val, i) => {

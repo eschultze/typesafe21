@@ -80,15 +80,19 @@ class Player(ABC):
 
 
 class RandomPlayer(Player):
+    def __init__(self, name: str = "Random", seed: int | None = None):
+        super().__init__(name)
+        self._rng = random.Random(seed)
+
     def make_decision(self, dealer_hand: Hand, deck: TrackedDeck) -> str:
         if self.hand.value >= 21:
             return "stand"
-        return random.choice(["hit", "stand"])
+        return self._rng.choice(["hit", "stand"])
 
     def decide_bet(self, deck: TrackedDeck) -> int:
         if self.balance < MIN_BET:
             return 0
-        return random.choice([10, 15, 20, 25, 30])
+        return min(self._rng.choice([10, 15, 20, 25, 30]), int(self.balance))
 
 
 class BasicStrategyPlayer(Player):

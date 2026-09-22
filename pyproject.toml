@@ -1,0 +1,22 @@
+[project]
+name = "typesafe21"
+version = "0.1.0"
+description = "AI-powered blackjack simulator with competing strategies"
+requires-python = ">=3.14"
+dependencies = [
+    "requests>=2.28.0",
+    "python-dotenv>=1.0",
+    "laya>=0.1.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "websockets>=12.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+tui = [
+    "textual>=1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]

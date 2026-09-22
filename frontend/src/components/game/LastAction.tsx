@@ -14,6 +14,7 @@ export function LastAction() {
   return (
     <AnimatePresence>
       <motion.div
+        key={lastAction?.round_number || 'result'}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
@@ -22,7 +23,7 @@ export function LastAction() {
       >
         <div className="text-xs text-muted-foreground mb-2">Round Result</div>
         <div className="flex flex-wrap gap-2">
-          {result.hands.map((h: any, i: number) => (
+          {result?.hands?.map((h: any, i: number) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, scale: 0.8 }}

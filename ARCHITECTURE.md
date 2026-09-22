@@ -7,14 +7,14 @@
 ### Terminal (sunset)
 
 ```
-main.py  ──>  ui/app.py  ──>  ui/screens/game.py  ──>  game.py  ──>  typesafe_ai.py  ──>  TypeSafe API (Jev)
-                                │                               │                               │
-                                │                               ├──>  laya_ai.py  ──>  Laya model (Laya)
-                                v                               v
-                            ui/widgets/                     player.py
-                            (Textual CSS)                   cards.py
-                                                          basic_strategy.py
-                                                          (BasicStrategyPlayer)
+main.py  ──>  ui/app.py  ──>  ui/screens/game.py  ──>  rules/game.py  ──>  rules/typesafe_ai.py  ──>  TypeSafe API (Jev)
+                                │                                       │                                       │
+                                │                                       ├──>  rules/laya_ai.py  ──>  Laya model (Laya)
+                                v                                       v
+                            ui/widgets/                             rules/player.py
+                            (Textual CSS)                           rules/cards.py
+                                                                  rules/basic_strategy.py
+                                                                  (BasicStrategyPlayer)
 ```
 
 ### Web (active)
@@ -27,33 +27,61 @@ Browser (Next.js)                Backend (FastAPI)              AI Engines
 │  shadcn/ui       │◄──REST─────┤  database.py      │           ├──────────────┤
 └─────────────────┘             └──────────────────┘           │ Laya model   │
       :3000                           :8000                    │ (Local AI)   │
-                                                               └──────────────┘
+                                                                └──────────────┘
 ```
 
-The web version ports the existing Python game logic to a FastAPI backend with WebSocket real-time updates. The frontend is a Next.js SPA with Zustand state management, Motion animations, and Three.js 3D scenes.
+The web version uses the same shared game logic in `rules/` as the terminal. The FastAPI backend in `web_main.py` manages sessions, broadcasts state via WebSocket, and persists rounds to SQLite. The frontend is a Next.js SPA with Zustand state management, Motion animations, and Three.js 3D scenes.
+
+## Project Structure
+
+All Python code lives at the project root with a single `pyproject.toml` managed by `uv`:
+
+```
+typesafe21/
+├── pyproject.toml          # Single venv for all Python deps (uv)
+├── .venv/                  # Managed by uv
+├── dev.sh                  # Starts both frontend and backend
+│
+├── rules/                  # Shared game logic (imported by both TUI and web)
+│   ├── cards.py
+│   ├── player.py
+│   ├── game.py
+│   ├── basic_strategy.py
+│   ├── typesafe_ai.py
+│   ├── laya_ai.py
+│   └── ai_shared.py
+│
+├── database.py             # SQLite (WAL, indexes, foreign keys, leaderboards)
+├── models.py               # Pydantic models for WebSocket API
+├── game_manager.py         # Game session manager (async, asyncio.to_thread)
+├── connection_manager.py   # WebSocket broadcast manager
+├── main.py                 # TUI entry point
+├── web_main.py             # FastAPI entry point
+│
+├── ui/                     # Terminal UI (Textual) [sunset]
+└── frontend/               # Next.js 19 frontend
+```
 
 ## Core Game Logic
 
-These modules are shared between terminal and web (the web version ports them to `backend/rules/`).
-
-### `game.py` — Game Mechanics
+### `rules/game.py` — Game Mechanics
 
 - `do_bets()` — Collects bets from all players, passes opponent balances and shoe composition to AI
 - `deal_initial()` — Deals one shared starting hand to all players (same cards for fair comparison), plus dealer's own hand
 - `play_player_hand()` — Decision loop for a single hand (hit/stand/double/split)
 - `_play_hand_loop()` — Helper to play out a split hand (no double/split allowed after split)
-- `play_dealer()` — Dealer hits until soft 17 or higher
+- `play_dealer()` — Dealer hits soft 17, hits on hard 16 or less
 - `determine_winner()` — Compares player hand vs dealer hand (win/lose/push)
 - `settle_round()` — Settles all hands including split hands, updates balances
 - `get_payout_multiplier()` — Returns 1.5 for blackjack, 1.0 otherwise
 
 Game mechanics stay here. No strategy logic. No decision-making.
 
-### `player.py` — Player Abstractions
+### `rules/player.py` — Player Abstractions
 
 - `Player` (ABC) — Base class with balance, betting, hand management, split_hands storage, balance_history
-- `RandomPlayer` — Random hit/stand, random flat bets ($10-$30)
-- `BasicStrategyPlayer` — Follows basic strategy exactly (6-deck, dealer stands S17), always bets minimum
+- `RandomPlayer` — Random hit/stand, random flat bets ($10-$30), clamped to balance. Seedable for reproducibility.
+- `BasicStrategyPlayer` — Follows basic strategy exactly (6-deck, dealer hits soft 17), always bets minimum
 - `AIPlayer` — Delegates all decisions to TypeSafe API via `typesafe_ai.py` (Jev AI)
   - `decide_bet()` — Calls `get_ai_bet()` with full shoe composition
   - `make_decision()` — Calls `get_ai_decision()` for hit/stand/double/split
@@ -62,7 +90,17 @@ Game mechanics stay here. No strategy logic. No decision-making.
   - Same interface as `AIPlayer` — uses identical prompts with Choice and Score primitives
   - Laya runs locally: ~33ms on GPU, ~300ms on CPU (vs ~240ms for TypeSafe API)
 
-### `typesafe_ai.py` — TypeSafe AI Decision Engine (Jev)
+### `rules/ai_shared.py` — Shared AI Bet Logic
+
+Extracted from `typesafe_ai.py` and `laya_ai.py` to eliminate duplication. Contains:
+
+- `build_bet_state()` — Constructs the full state dictionary sent to both AI engines (balance, count, shoe position, opponent balances, session performance, shoe composition)
+- `process_bet_result()` — Processes the AI's Score response into a bet amount using balance-based percentages (Score 0 → 5%, 1 → 15%, 2 → 25%, 3 → 35%, 4 → 50%)
+- `build_bet_reasoning()` — Generates the dynamic hint for bet sizing based on true count
+
+Both AI modules import and call these shared functions, keeping only their engine-specific API calls locally.
+
+### `rules/typesafe_ai.py` — TypeSafe AI Decision Engine (Jev)
 
 Two functions, two TypeSafe API calls per round:
 
@@ -72,46 +110,45 @@ Two functions, two TypeSafe API calls per round:
 - Structured criteria with `what`, `not_for`, and `examples` for each action
 - No basic strategy hints — AI decides autonomously
 - Returns: decision, confidence, probabilities
+- Retries on timeout, connection error, HTTP 5xx/429, and malformed responses
 
 **`get_ai_bet()`** — Bet sizing
 - Sends balance, count, shoe position, opponent balances, session performance, shoe composition
 - Uses **Score** primitive with 5 levels (minimum → maximum)
-- Maps continuous score (0.0-4.0) to balance-based percentage:
-  - Score 0 → 5%, Score 1 → 15%, Score 2 → 25%, Score 3 → 35%, Score 4 → 50%
-- Dynamic hint based on actual true count
+- Delegates to `ai_shared.py` for score-to-bet mapping
 - Returns: bet, score, confidence, probabilities, reasoning
 
-### `laya_ai.py` — Local Laya AI Decision Engine
+### `rules/laya_ai.py` — Local Laya AI Decision Engine
 
 Same interface as `typesafe_ai.py`, using the [Laya](https://github.com/NandhaKishorM/laya) library for local inference:
 
-- Lazy-loaded singleton: `laya.load("convaiinnovations/laya")` (English checkpoint, ModernBERT-large, 421M params)
+- Lazy-loaded singleton with `threading.Lock` for thread safety
 - Uses identical state dictionaries and question criteria as TypeSafe
 - **Choice** primitive for action selection, **Score** primitive for bet sizing
 - Response parsing: `result["answers"]["action"]["choice"]` with `confidence` and `probabilities`
 - ~33ms on GPU, ~300ms on CPU (vs ~240ms for TypeSafe API round-trip)
 
-### `basic_strategy.py` — Basic Strategy Reference
+### `rules/basic_strategy.py` — Basic Strategy Reference
 
-- Complete lookup tables for 6-deck, dealer stands S17
+- Complete lookup tables for 6-deck, dealer hits soft 17
 - Hard totals, soft totals, pairs
 - `get_basic_strategy()` — Returns H/S/D/P recommendation
 - `get_basic_strategy_action()` — Returns actionable decision (hit/stand/double/split)
 - Used by `BasicStrategyPlayer` for gameplay and displayed for reference
 
-### `cards.py` — Card Game Primitives
+### `rules/cards.py` — Card Game Primitives
 
 - `Suit` — Enum: Hearts, Diamonds, Clubs, Spades
 - `Card` — Rank + suit with computed value
 - `Hand` — Card collection with value calculation, soft/hard detection, bust/blackjack checks
-- `Deck` — Basic deck with shuffle and deal
 - `TrackedDeck` — Deck with card counting (Hi-Lo), shoe penetration tracking, auto-reshuffle at 25%
 
 The `TrackedDeck` provides:
 - `running_count` — Hi-Lo count
-- `true_count` — Running count adjusted for decks remaining
+- `true_count` — Running count adjusted for decks remaining (float, 1 decimal)
 - `get_remaining_by_rank()` — Cards left by rank (for AI context)
 - `get_cards_since_reshuffle()` — Shoe penetration
+- `to_dict()` — Serialized state for WebSocket API
 
 ### `database.py` — SQLite Persistence
 
@@ -146,28 +183,39 @@ player_rounds (
 )
 ```
 
-Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_last_incomplete_session`, `get_round_count`, `get_session_stats`, `get_all_sessions`, `get_session_rounds`, `clear_database`
+Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_last_incomplete_session`, `get_round_count`, `get_session_stats`, `get_all_sessions`, `get_session_rounds`, `clear_database`, `get_top_single_turn_profits`, `get_top_session_profits`
+
+Configuration:
+- WAL mode enabled (`PRAGMA journal_mode=WAL`) for concurrent read/write
+- Foreign keys enforced (`PRAGMA foreign_keys = ON`)
+- Indexes on `rounds(session_id)`, `player_rounds(round_id)`, `player_rounds(player_name)`
 
 ## Web Backend
 
-### `backend/main.py` — FastAPI App
+### `web_main.py` — FastAPI App
 
-- REST endpoints: `GET /api/health`, `GET /api/history`, `GET /api/history/{id}`
+- REST endpoints: `GET /api/health`, `GET /api/history`, `GET /api/history/{id}`, `GET /api/leaderboard`
 - WebSocket endpoint: `/ws/{game_id}`
+- WebSocket message validation: rejects non-dict payloads, unknown actions, and invalid `delay_ms` values (clamped to 100-5000ms)
+- Auto-play task stored per session, cancelled before re-creating and on disconnect
 - Actions handled via WebSocket JSON messages:
   - `new_game` — Reset deck, players, start fresh session
-  - `play_round` — Play one complete round (bet, deal, player turns, dealer, settle)
+  - `play_round` — Play one complete round (bet, deal, player turns, dealer, settle). Requires `phase == "idle"` — rejected if a round is in progress.
   - `auto_play` — Start/stop auto-play loop with configurable delay and round limit
   - `end_session` — Mark session complete, start new game
   - `get_state` — Request current state
 
-### `backend/game_manager.py` — Game Session Manager
+### `game_manager.py` — Game Session Manager
 
-- `GameManager` — Pool of `GameSession` instances by game ID
+- `GameManager` — Pool of `GameSession` instances by game ID. Sessions are cleaned up on disconnect.
 - `GameSession` — Wraps game logic for web: converts state to Pydantic models, manages auto-play loop
+  - `play_round()` is async — DB calls and blocking AI calls wrapped in `asyncio.to_thread()` to avoid blocking the event loop
+  - Intermediate state broadcasts between phases (betting, dealing, player_turn, dealer_turn) so frontend sees phase transitions
+  - Auto-play loop catches exceptions, logs them, and broadcasts error state to clients
+  - Creates session before saving rounds to prevent FK violations
 - Delegates history/stats to `database.py`
 
-### `backend/models.py` — Pydantic Models
+### `models.py` — Pydantic Models
 
 - `GameState` — Full game state (phase, players, dealer, shoe, last_action, etc.)
 - `PlayerState` — Per-player state (name, balance, hand, wins/losses/pushes)
@@ -175,36 +223,39 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 - `ShoeState` — Shoe state (remaining, counts, played_ranks)
 - `BetResult`, `HandResult`, `RoundResultModel` — Round result models
 
-### `backend/connection_manager.py` — WebSocket Manager
+### `connection_manager.py` — WebSocket Manager
 
 - `ConnectionManager` — Tracks WebSocket connections per game ID
-- `broadcast()` — Sends messages to all connected clients in a game
+- `broadcast()` — Sends messages to all connected clients in a game. Dead connections that fail during send are automatically removed.
 
 ## Web Frontend
 
 ### State Management — `gameStore.ts` (Zustand)
 
-- `GameState` — Mirror of backend state (phase, players, dealer, shoe)
-- `jev_bet_history` / `jev_confidence_history` — Jev AI stats tracked across rounds
-- `laya_bet_history` / `laya_confidence_history` — Laya AI stats tracked across rounds
+- `GameState` — Mirror of backend state (phase as union type, players, dealer, shoe)
+- `player_histories` — Per-player stats: `Record<string, { bets: number[], confidences: number[] }>` — tracks bet and confidence history for all players (Random, Basic, Jev, Laya)
 - `prev_bets` — Used to detect bet changes and trigger chip animations
 - `chipsAnimating` — Animation flag
+- `LastAction` — Typed discriminated union for previous round results (replaces `any`)
 - WebSocket integration via `sendAction()` and `updateState()`
 
 ### Key Components
 
 - `PlayingCard` — Animated card with spring physics (Motion), suit-colored text, tokenized background/border
-- `PlayerHand` — Player hand panel with cards, badges (BJ/bust), accent glow, profit/loss coloring
+- `PlayerHand` — Player hand panel with cards, badges (BJ/bust), accent glow, profit/loss coloring, inline chips, AI thinking overlay
 - `DealerHand` — Dealer hand with card hiding until reveal phase, themed transitions
 - `GameControls` — New Game, Play Round (accent), End Session, Auto Play with 8-state styling
 - `Scoreboard` — Player balances with animated profit indicators, varied column widths
 - `ShoeIndicator` — Progress bar (accent) showing shoe depletion + true count badge
-- `BalanceChart` — Separate SVG line charts for Jev and Laya balance over time
+- `BalanceChart` — SVG line charts per-player balance over time (player-agnostic via `player_histories`)
 - `CardTracker` — Bar chart showing card composition by rank with themed bar colors
-- `StatsPanel` — Separate stats panels for Jev and Laya (avg bet, confidence, rounds)
-- `LastAction` — Displays previous round's results with profit/loss badges
-- `WinSound` — Plays cash register sound on AI win
+- `StatsPanel` — Per-player stats panels (avg bet, confidence, rounds) via `player_histories`
+- `LastAction` — Displays previous round's results with profit/loss badges (AnimatePresence keyed for exit animations)
+- `WinSound` — Plays cash register sound on AI win (proper cleanup on unmount)
+- `Leaderboard` — Top players across sessions (fetched via Next.js proxy)
 - `HeroScene` / `ChipScene` — Three.js 3D scenes
+- `ErrorBoundary` — Catches runtime exceptions, prevents blank-white crashes
+- `Nav` — Shared navigation bar extracted from page layouts
 
 ### WebSocket Hook — `useGameSocket.ts`
 
@@ -216,24 +267,29 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 
 ```
 1. Frontend sends { action: "play_round" } via WebSocket
-2. Backend: do_bets()
+2. Backend: do_bets() [in asyncio.to_thread]
+   ├── Broadcasts "betting" phase
    ├── Jev AI calls TypeSafe API get_ai_bet() → Score 0-4 → balance-based %
    ├── Laya AI calls local get_ai_bet() → Score 0-4 → balance-based %
    ├── BasicStrategyPlayer bets minimum
    ├── RandomPlayer picks random flat bet
    └── Bets deducted from balances
-3. Backend: deal_initial()
+3. Backend: deal_initial() [in asyncio.to_thread]
+   ├── Broadcasts "dealing" phase
    ├── Deal one shared hand (2 cards) → copy to all 4 players
    └── Deal dealer's own hand (2 cards)
 4. Backend: For each player: play_player_hand()
+   ├── Broadcasts "player_turn" phase
    ├── Jev AI calls TypeSafe API get_ai_decision() → hit/stand/double/split
    ├── Laya AI calls local get_ai_decision() → hit/stand/double/split
    ├── BasicStrategy follows lookup table
    └── Random picks randomly
-5. Backend: play_dealer() — Dealer hits until >= 17
+5. Backend: play_dealer() [in asyncio.to_thread]
+   ├── Broadcasts "dealer_turn" phase
+   └── Dealer hits soft 17, stands on hard 17+
 6. Backend: settle_round() — Win/lose/push for each player
 7. Backend: save_round() to database
-8. Backend: Broadcast full state to all WebSocket clients
+8. Backend: Broadcasts final state to all WebSocket clients
 9. Frontend: Zustand store updates → React re-renders
 ```
 
@@ -251,11 +307,13 @@ Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_l
 
 6. **No fallbacks** — If the API is down, the game stops. This forces the AI to actually play rather than silently reverting to local rules. Laya runs locally so it's always available.
 
-7. **Shared game logic** — The `backend/rules/` directory mirrors root game modules with `to_dict()` serialization, keeping terminal and web independent.
+7. **Shared game logic** — All Python code uses a single `rules/` package at the root, shared by both the TUI and the web backend via `pyproject.toml`.
 
 8. **Dual AI engines** — Jev (remote, ~240ms) and Laya (local, ~33ms GPU) use identical prompts with Choice and Score primitives, enabling direct comparison of remote vs local inference.
 
-8. **Real-time updates** — WebSocket broadcasts full game state after every phase, enabling smooth animations and live updates.
+9. **Real-time updates** — WebSocket broadcasts full game state after every phase, enabling smooth animations and live updates.
+
+10. **Single venv** — All Python dependencies managed by `uv` with one `pyproject.toml`. No duplicate virtual environments.
 
 ## Design System — Midnight (Hallmark)
 

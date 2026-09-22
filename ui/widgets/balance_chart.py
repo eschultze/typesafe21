@@ -6,7 +6,7 @@ from textual.geometry import Size
 from textual.widget import Widget
 from textual.widgets import Static
 
-from player import Player, STARTING_BALANCE
+from rules.player import Player, STARTING_BALANCE
 
 BAR_CHARS = " ▁▂▃▄▅▆▇█"
 

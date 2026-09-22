@@ -1,24 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export function GameControls() {
-  const { phase, auto_play, round_number } = useGameStore((s) => s.state);
+  const phase = useGameStore((s) => s.state.phase);
+  const auto_play = useGameStore((s) => s.state.auto_play);
+  const round_number = useGameStore((s) => s.state.round_number);
   const sendAction = useGameStore((s) => s.sendAction);
   const connected = useGameStore((s) => s.connected);
   const [confirmNewGame, setConfirmNewGame] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const isIdle = phase === "idle";
 
   const handleNewGame = () => {
     if (!confirmNewGame) {
       setConfirmNewGame(true);
-      setTimeout(() => setConfirmNewGame(false), 3000);
+      timerRef.current = setTimeout(() => setConfirmNewGame(false), 3000);
       return;
     }
+    if (timerRef.current) clearTimeout(timerRef.current);
     setConfirmNewGame(false);
     sendAction("new_game");
   };

@@ -19,10 +19,8 @@ Opens `http://localhost:3000` (frontend) and `http://localhost:8000` (backend). 
 
 ```bash
 cd typesafe21
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 main.py
+uv sync --extra tui
+uv run python main.py
 ```
 
 ## How It Works
@@ -37,7 +35,7 @@ Jev    | Laya
 | Player | Strategy | Bet Sizing |
 |--------|----------|------------|
 | **Random** | Random hit/stand decisions | Random flat bets ($10-$30) |
-| **Basic** | Follows basic strategy (6-deck, dealer stands S17) | Always minimum bet |
+| **Basic** | Follows basic strategy (6-deck, dealer hits soft 17) | Always minimum bet |
 | **Jev (AI)** | Remote TypeSafe API — decides everything autonomously | AI-scored, balance-based (% of bankroll) |
 | **Laya (AI)** | Local [Laya](https://github.com/NandhaKishorM/laya) model — 33ms decisions on GPU | AI-scored, balance-based (% of bankroll) |
 
@@ -55,7 +53,7 @@ The AIs decide **autonomously** — no basic strategy hints or bias are sent. Ba
 
 - 6-deck shoe, auto-reshuffle at 25% remaining
 - Hi-Lo card counting (for AI's bet sizing context)
-- Dealer stands on soft 17
+- Dealer hits soft 17
 - Blackjack pays 3:2
 - Double down allowed on first two cards
 - Split pairs allowed (one split per hand, no double after split)
@@ -116,71 +114,30 @@ The web version reads these environment variables:
 
 ```
 typesafe21/
-  dev.sh                 # Start frontend + backend (Ctrl+C to stop)
-  DESIGN.md              # Hallmark Midnight design system (tokens, palette, motion)
-  PLAN_WEB_REDESIGN.md   # Full redesign plan (8 phases)
-  main.py                # Terminal entry point
-  game.py                # Round logic, dealing, payouts, split handling
-  player.py              # Player classes (Random, BasicStrategy, AI, Laya)
-  typesafe_ai.py         # TypeSafe API integration (Choice + Score) — used by Jev
-  laya_ai.py             # Local Laya integration (Choice + Score) — used by Laya
-  basic_strategy.py      # Basic strategy lookup (displayed for reference)
-  cards.py               # Card, Hand, Deck, TrackedDeck
-  database.py            # SQLite persistence
-  cash_register.mp3      # Sound effect on AI win
-  requirements.txt       # Terminal dependencies
-  .env                   # API keys (gitignored)
-  game_history.db        # Created at runtime
-
-  backend/               # FastAPI + WebSocket backend
-    main.py              # FastAPI app, WebSocket endpoint, REST API
-    game_manager.py      # GameSession wrapping game logic for web
-    connection_manager.py # WebSocket broadcast manager
-    models.py            # Pydantic models (GameState, PlayerState, etc.)
-    database.py          # SQLite persistence (same schema as root)
-    rules/               # Game logic ported from root with to_dict()
-      cards.py
-      player.py
-      game.py
-      basic_strategy.py
-      typesafe_ai.py
-      laya_ai.py
-
-  frontend/              # Next.js 19 + React + Three.js
-    src/
-      app/
-        globals.css      # Hallmark Midnight tokens, motion, reduced-motion
-        layout.tsx       # Root layout with data-theme="midnight"
-        page.tsx         # Landing page (Marquee Hero, N7 nav, Ft5 footer)
-        game/page.tsx    # Main game board (asymmetric layout)
-        history/page.tsx # Session history browser
-      stores/
-        gameStore.ts     # Zustand state (game state, WebSocket, animations)
-      hooks/
-        useGameSocket.ts # WebSocket hook with reconnection
-      components/
-        game/            # PlayingCard, PlayerHand, DealerHand, Scoreboard,
-                         # GameControls, BalanceChart, ShoeIndicator,
-                         # CardTracker, StatsPanel, LastAction, WinSound,
-                         # HeroScene, ChipScene
-        ui/              # shadcn/ui components (button, badge, card, etc.)
-      components3d/      # Three.js scenes (ChipStack3D, CardShuffle)
-
-  ui/                    # Terminal UI (Textual) [sunset, kept for reference]
-    app.py               # Textual app, screen routing
-    styles.tss           # Textual CSS
-    screens/
-      game.py            # Main game screen with state machine
-      menu.py            # Menu screen
-      summary.py         # Session summary
-      history.py         # Session history (modal)
-    widgets/
-      card_art.py        # ASCII card rendering (5-line box art)
-      dealer_panel.py    # Dealer hand display
-      players_panel.py   # Player hands with card art + loading spinner
-      scoreboard_panel.py # Balances, W/L, win rate
-      deck_panel.py      # Deck remaining, true count, running count
-      balance_chart.py   # Custom bar chart with Y-axis labels
+├── pyproject.toml          # uv project config (single venv for all Python deps)
+├── dev.sh                  # Start frontend + backend (Ctrl+C to stop)
+│
+├── rules/                  # Shared game logic
+│   ├── cards.py            # Card, Hand, TrackedDeck (with to_dict())
+│   ├── player.py           # Player classes (Random, Basic, AI, Laya)
+│   ├── game.py             # Round logic, dealing, payouts, splits
+│   ├── basic_strategy.py   # Basic strategy lookup tables
+│   ├── typesafe_ai.py      # TypeSafe API integration (Jev)
+│   ├── laya_ai.py          # Local Laya integration (Laya)
+│   └── ai_shared.py        # Shared AI bet logic (DRY)
+│
+├── database.py             # SQLite persistence (WAL, indexes, foreign keys)
+├── models.py               # Pydantic models (GameState, PlayerState, etc.)
+├── game_manager.py         # Game session manager (async, to_thread)
+├── connection_manager.py   # WebSocket broadcast manager
+├── main.py                 # Terminal entry point (sunset)
+├── web_main.py             # FastAPI entry point
+│
+├── ui/                     # Terminal UI (Textual) [sunset, kept for reference]
+├── frontend/               # Next.js 19 + React + Three.js
+├── cash_register.mp3       # Sound effect on AI win
+├── game_history.db         # Created at runtime
+└── .env                    # API keys (gitignored)
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed design and [WEB.md](WEB.md) for web-specific details.
