@@ -3,6 +3,56 @@
 import { motion } from "motion/react";
 import { useGameStore } from "@/stores/gameStore";
 
+function ScoreLine({ history }: { history: number[] }) {
+  if (history.length < 2) return null;
+
+  const w = 200;
+  const h = 60;
+  const pad = 4;
+
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const range = max - min || 1;
+
+  const points = history.map((v, i) => {
+    const x = pad + (i / (history.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - min) / range) * (h - pad * 2);
+    return `${x},${y}`;
+  });
+
+  const profit = history[history.length - 1] >= (history[0] ?? 100);
+  const color = profit ? "var(--color-profit)" : "var(--color-loss)";
+
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <defs>
+        <filter id={`score-glow-${profit ? "w" : "l"}`}>
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <polyline
+        points={points.join(" ")}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.18"
+        filter={`url(#score-glow-${profit ? "w" : "l"})`}
+      />
+    </svg>
+  );
+}
+
 export function Scoreboard() {
   const players = useGameStore((s) => s.state.players);
 
@@ -17,21 +67,22 @@ export function Scoreboard() {
           <motion.div
             key={p.name}
             layout
-            className="flex flex-col items-center p-3 rounded-[10px] bg-card border border-border min-w-[100px] flex-1"
+            className="relative flex flex-col items-center p-3 rounded-[10px] bg-card border border-border min-w-[100px] flex-1 overflow-hidden"
           >
-            <span className="text-xs text-muted-foreground mb-1">{p.name}</span>
+            <ScoreLine history={p.balance_history} />
+            <span className="relative text-xs text-muted-foreground mb-1 z-10">{p.name}</span>
             <motion.span
               key={p.balance}
               initial={{ scale: 1.2 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
-              className={`text-xl font-bold tabular-nums ${
+              className={`relative text-xl font-bold tabular-nums z-10 ${
                 profit > 0 ? "text-[var(--color-profit)]" : profit < 0 ? "text-[var(--color-loss)]" : "text-foreground"
               }`}
             >
               ${p.balance}
             </motion.span>
-            <span className={`text-xs tabular-nums ${profit >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
+            <span className={`relative text-xs tabular-nums z-10 ${profit >= 0 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>
               {profit >= 0 ? "+" : ""}{profit}
             </span>
           </motion.div>
