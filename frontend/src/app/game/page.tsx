@@ -6,7 +6,7 @@ import { DealerHand } from "@/components/game/DealerHand";
 import { PlayerHand } from "@/components/game/PlayerHand";
 import { Scoreboard } from "@/components/game/Scoreboard";
 import { ShoeIndicator } from "@/components/game/ShoeIndicator";
-import { BalanceChart } from "@/components/game/BalanceChart";
+
 import { GameControls } from "@/components/game/GameControls";
 import { LastAction } from "@/components/game/LastAction";
 import { HeroScene } from "@/components/game/HeroScene";
@@ -67,7 +67,6 @@ export default function GameBoard() {
             <StatsPanel />
             <CardTracker />
             <Leaderboard />
-            <BalanceChart />
           </div>
         </div>
 
@@ -100,9 +99,6 @@ export default function GameBoard() {
 
             {/* Scoreboard */}
             <Scoreboard />
-
-            {/* Balance Chart */}
-            <BalanceChart />
           </div>
 
           {/* ─── Right Column: Stats ─── */}

@@ -1,9 +1,12 @@
 import asyncio
 import json
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
 
 from connection_manager import manager
 from game_manager import GameManager

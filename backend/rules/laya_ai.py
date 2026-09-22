@@ -1,5 +1,8 @@
+import logging
 import laya
 from rules.cards import Hand, TrackedDeck
+
+log = logging.getLogger("laya_ai")
 
 _agent = None
 
@@ -118,9 +121,13 @@ def get_ai_decision(
     result = agent.predict(state, questions)
 
     action_answer = result.get("answers", {}).get("action", {})
+    decision = action_answer.get("choice", "stand")
+    confidence = action_answer.get("confidence", 0.0)
+    log.info("Laya decision: %s (conf: %.2f) | hand=%s vs dealer=%s",
+             decision, confidence, player_hand.value, dealer_upcard_value)
     return {
-        "decision": action_answer.get("choice", "stand"),
-        "confidence": action_answer.get("confidence", 0.0),
+        "decision": decision,
+        "confidence": confidence,
         "probabilities": action_answer.get("probabilities", {}),
     }
 
@@ -208,6 +215,8 @@ def get_ai_bet(
 
     bet = _score_to_bet(weighted_sum, min_bet, balance, true_count)
     reasoning = _build_bet_reasoning(weighted_sum, true_count, balance, session_wins, session_losses)
+    log.info("Laya bet: $%d (score=%.2f, TC=%+d, balance=$%d) probs=%s",
+             bet, weighted_sum, true_count, balance, probabilities)
 
     return {
         "bet": bet,

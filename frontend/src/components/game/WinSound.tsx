@@ -15,11 +15,11 @@ export function WinSound() {
     if (!lastAction || lastAction.type !== "round_result") return;
 
     const { result } = lastAction;
-    const aiWon = result.hands?.some(
+    const anyAIWon = result.hands?.some(
       (h: any) => h.is_ai && h.result === "win"
     );
 
-    if (aiWon && audioRef.current) {
+    if (anyAIWon && audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch(() => {});
     }

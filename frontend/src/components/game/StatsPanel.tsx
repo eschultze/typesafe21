@@ -22,18 +22,18 @@ function StatsCard({ label, betHistory, confidenceHistory }: { label: string; be
   return (
     <div className="flex flex-col p-3 rounded-[10px] bg-card border border-border">
       <span className="text-xs text-muted-foreground mb-2">{label}</span>
-      <div className="grid grid-cols-3 gap-4 text-center">
+      <div className="flex items-center gap-6 text-center">
         <div className="flex flex-col">
-          <span className="text-2xl font-bold tabular-nums">${avgBet}</span>
-          <span className="text-xs text-muted-foreground">Avg Bet</span>
+          <span className="text-lg font-bold tabular-nums">${avgBet}</span>
+          <span className="text-[10px] text-muted-foreground">Avg Bet</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-2xl font-bold tabular-nums">{avgConfidence}%</span>
-          <span className="text-xs text-muted-foreground">Avg Confidence</span>
+          <span className="text-lg font-bold tabular-nums">{avgConfidence}%</span>
+          <span className="text-[10px] text-muted-foreground">Confidence</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-2xl font-bold tabular-nums">{totalRounds}</span>
-          <span className="text-xs text-muted-foreground">Rounds</span>
+          <span className="text-lg font-bold tabular-nums">{totalRounds}</span>
+          <span className="text-[10px] text-muted-foreground">Rounds</span>
         </div>
       </div>
     </div>
@@ -47,9 +47,9 @@ export function StatsPanel() {
   const layaConfidenceHistory = useGameStore((s) => s.laya_confidence_history);
 
   return (
-    <div className="grid grid-cols-2 gap-2 w-full">
-      <StatsCard label="Jev Statistics" betHistory={jevBetHistory} confidenceHistory={jevConfidenceHistory} />
-      <StatsCard label="Laya Statistics" betHistory={layaBetHistory} confidenceHistory={layaConfidenceHistory} />
+    <div className="flex flex-col gap-2 w-full">
+      <StatsCard label="Jev" betHistory={jevBetHistory} confidenceHistory={jevConfidenceHistory} />
+      <StatsCard label="Laya" betHistory={layaBetHistory} confidenceHistory={layaConfidenceHistory} />
     </div>
   );
 }
