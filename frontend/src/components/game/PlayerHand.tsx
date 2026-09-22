@@ -73,6 +73,34 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
         <span>Balance: <span className={`font-bold tabular-nums ${player.balance >= 100 ? "text-[var(--color-profit)]" : "text-[var(--color-loss)]"}`}>${player.balance}</span></span>
         <span className="tabular-nums">{player.wins}W / {player.losses}L / {player.pushes}P</span>
       </div>
+
+      {/* Last 5 rounds */}
+      {player.balance_history.length > 1 && (
+        <div className="flex gap-1">
+          {(() => {
+            const h = player.balance_history;
+            const start = Math.max(1, h.length - 5);
+            const results: string[] = [];
+            for (let i = start; i < h.length; i++) {
+              if (h[i] > h[i - 1]) results.push("win");
+              else if (h[i] < h[i - 1]) results.push("loss");
+              else results.push("push");
+            }
+            return results.map((r, i) => (
+              <div
+                key={start + i}
+                className={`w-2 h-2 rounded-full ${
+                  r === "win"
+                    ? "bg-[var(--color-profit)]"
+                    : r === "loss"
+                    ? "bg-[var(--color-loss)]"
+                    : "bg-muted-foreground/40"
+                }`}
+              />
+            ));
+          })()}
+        </div>
+      )}
     </motion.div>
   );
 }

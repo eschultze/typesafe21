@@ -13,6 +13,8 @@ import { HeroScene } from "@/components/game/HeroScene";
 import { WinSound } from "@/components/game/WinSound";
 import { StatsPanel } from "@/components/game/StatsPanel";
 import { CardTracker } from "@/components/game/CardTracker";
+import { Leaderboard } from "@/components/game/Leaderboard";
+import { BalanceLineChart } from "@/components/game/BalanceLineChart";
 import { ChipScene } from "@/components/game/ChipScene";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "motion/react";
@@ -55,7 +57,10 @@ export default function GameBoard() {
             <div className="w-full h-px bg-border" />
             <section className="grid grid-cols-1 gap-4 w-full">
               {players.map((_p, i) => (
-                <PlayerHand key={i} playerIndex={i} />
+                <div key={i} className="flex flex-col gap-1">
+                  <PlayerHand playerIndex={i} />
+                  <BalanceLineChart playerIndex={i} />
+                </div>
               ))}
             </section>
             <ChipScene />
@@ -65,6 +70,7 @@ export default function GameBoard() {
             <ShoeIndicator />
             <StatsPanel />
             <CardTracker />
+            <Leaderboard />
             <BalanceChart />
           </div>
         </div>
@@ -86,7 +92,10 @@ export default function GameBoard() {
             {/* Players — equal widths */}
             <section className="grid grid-cols-3 gap-4 w-full">
               {players.map((_p, i) => (
-                <PlayerHand key={i} playerIndex={i} />
+                <div key={i} className="flex flex-col gap-1">
+                  <PlayerHand playerIndex={i} />
+                  <BalanceLineChart playerIndex={i} />
+                </div>
               ))}
             </section>
 
@@ -109,6 +118,7 @@ export default function GameBoard() {
             <ShoeIndicator />
             <StatsPanel />
             <CardTracker />
+            <Leaderboard />
           </div>
         </div>
       </div>
