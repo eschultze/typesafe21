@@ -80,6 +80,8 @@ interface GameStore {
   player_histories: Record<string, { bets: number[]; confidences: number[] }>;
   prev_bets: number[];
   chipsAnimating: boolean;
+  last_recorded_round: number;
+  chipAnimTimeout: ReturnType<typeof setTimeout> | null;
 
   setConnected: (connected: boolean) => void;
   setWebSocket: (ws: WebSocket | null) => void;
@@ -112,6 +114,8 @@ export const useGameStore = create<GameStore>()(
       player_histories: {},
       prev_bets: [],
       chipsAnimating: false,
+      last_recorded_round: 0,
+      chipAnimTimeout: null,
 
       setConnected: (connected) => set({ connected }),
       setWebSocket: (ws) => set({ ws }),
@@ -125,6 +129,7 @@ export const useGameStore = create<GameStore>()(
         // Detect new game (round_number resets to 0 after being > 0)
         if (state.round_number === 0 && prev.round_number > 0) {
           updates.player_histories = {};
+          updates.last_recorded_round = 0;
         }
 
         // Detect bet changes → trigger chip animation
@@ -137,8 +142,9 @@ export const useGameStore = create<GameStore>()(
         if (betsChanged && state.phase !== "idle") {
           updates.prev_bets = newBets;
           updates.chipsAnimating = true;
-          setTimeout(() => {
-            get().chipsAnimating && set({ chipsAnimating: false });
+          if (get().chipAnimTimeout) clearTimeout(get().chipAnimTimeout);
+          updates.chipAnimTimeout = setTimeout(() => {
+            if (get().chipsAnimating) set({ chipsAnimating: false, chipAnimTimeout: null });
           }, state.auto_play ? 150 : 300);
         }
 
@@ -146,24 +152,26 @@ export const useGameStore = create<GameStore>()(
         if (state.phase === "idle" && prev.phase !== "idle") {
           updates.prev_bets = state.players.map(() => 0);
           updates.chipsAnimating = true;
-          setTimeout(() => set({ chipsAnimating: false }), 200);
+          if (get().chipAnimTimeout) clearTimeout(get().chipAnimTimeout);
+          updates.chipAnimTimeout = setTimeout(() => set({ chipsAnimating: false, chipAnimTimeout: null }), 200);
         }
 
-        if (
-          lastAction?.type === "round_result" &&
-          state.round_number > prev.round_number
-        ) {
-          const result = lastAction.result;
-          const histories = { ...get().player_histories };
-          for (const h of result?.hands ?? []) {
-            const name = h.name as string;
-            if (!histories[name]) {
-              histories[name] = { bets: [], confidences: [] };
+        if (lastAction?.type === "round_result") {
+          const roundKey = lastAction.round_number ?? state.round_number;
+          if (roundKey !== get().last_recorded_round) {
+            const result = lastAction.result;
+            const histories = { ...get().player_histories };
+            for (const h of result?.hands ?? []) {
+              const name = h.name as string;
+              const existing = histories[name] ?? { bets: [], confidences: [] };
+              histories[name] = {
+                bets: [...existing.bets, h.bet],
+                confidences: [...existing.confidences, h.confidence],
+              };
             }
-            histories[name].bets.push(h.bet);
-            histories[name].confidences.push(h.confidence);
+            updates.player_histories = histories;
+            updates.last_recorded_round = roundKey;
           }
-          updates.player_histories = histories;
         }
 
         set(updates);

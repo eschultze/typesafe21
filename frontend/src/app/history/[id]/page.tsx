@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "motion/react";
 import { Nav } from "@/components/Nav";
 
 interface PlayerRound {
@@ -170,38 +169,40 @@ export default function SessionDetailPage({
             <span className="text-xs text-muted-foreground mb-3">
               Win / Lose — Last {recentRounds.length} Rounds
             </span>
-            <div className="flex gap-1 items-end h-32">
-              {recentRounds.map((round) => {
-                const jevResult = round.players.find(
-                  (p) => p.player_name === "Jev (AI)"
-                );
-                const result = jevResult?.result || "push";
-                return (
-                  <div
-                    key={round.id}
-                    className="flex-1 flex flex-col items-center gap-1"
-                  >
-                    <motion.div
-                      className="w-full rounded-t"
-                      initial={{ height: 0 }}
-                      animate={{ height: result === "win" ? "100%" : result === "lose" ? "60%" : "30%" }}
-                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                      style={{
-                        backgroundColor: resultColors[result] || resultColors.push,
-                        minHeight: "4px",
-                      }}
-                    />
-                    <span className="text-[9px] text-muted-foreground tabular-nums">
-                      R{round.round_number}
-                    </span>
+            <div className="flex gap-2 items-end h-32">
+              {recentRounds.map((round) => (
+                <div
+                  key={round.id}
+                  className="flex-1 flex flex-col items-center gap-1"
+                >
+                  <div className="flex gap-px items-end w-full h-28">
+                    {round.players.map((p) => {
+                      const result = p.result || "push";
+                      const height = result === "win" ? "100%" : result === "lose" ? "60%" : "30%";
+                      return (
+                        <div
+                          key={p.player_index}
+                          className="flex-1 rounded-t transition-[height] duration-300 ease-out"
+                          style={{
+                            height,
+                            backgroundColor: resultColors[result] || resultColors.push,
+                            minHeight: "4px",
+                          }}
+                          title={`${p.player_name}: ${result.toUpperCase()}`}
+                        />
+                      );
+                    })}
                   </div>
-                );
-              })}
+                  <span className="text-[9px] text-muted-foreground tabular-nums">
+                    R{round.round_number}
+                  </span>
+                </div>
+              ))}
               {recentRounds.length === 0 && (
                 <span className="text-xs text-muted-foreground">No rounds played</span>
               )}
             </div>
-            <div className="flex gap-4 mt-3 text-[10px] text-muted-foreground">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: resultColors.win }} />
                 Win
@@ -214,6 +215,12 @@ export default function SessionDetailPage({
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: resultColors.push }} />
                 Push
               </span>
+              {playerNames.map((name) => (
+                <span key={name} className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full border border-muted-foreground/40" />
+                  {name}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -222,27 +229,42 @@ export default function SessionDetailPage({
             <span className="text-xs text-muted-foreground mb-3">
               AI Decisions — Last {recentRounds.length} Rounds
             </span>
-            <div className="flex gap-1 items-end h-32">
+            <div className="flex gap-2 items-end h-32">
               {recentRounds.map((round) => {
-                const jevResult = round.players.find(
-                  (p) => p.player_name === "Jev (AI)"
-                );
-                const decision = jevResult?.decision || "";
+                const aiPlayers = round.players.filter((p) => p.decision);
                 return (
                   <div
                     key={round.id}
                     className="flex-1 flex flex-col items-center gap-1"
                   >
-                    <motion.div
-                      className="w-full rounded-t"
-                      initial={{ height: 0 }}
-                      animate={{ height: decision ? "100%" : "10%" }}
-                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                      style={{
-                        backgroundColor: decisionColors[decision] || decisionColors[""],
-                        minHeight: "4px",
-                      }}
-                    />
+                    <div className="flex gap-px items-end w-full h-28">
+                      {aiPlayers.length > 0 ? (
+                        aiPlayers.map((p) => {
+                          const decision = p.decision || "";
+                          return (
+                            <div
+                              key={p.player_index}
+                              className="flex-1 rounded-t transition-[height] duration-300 ease-out"
+                              style={{
+                                height: decision ? "100%" : "10%",
+                                backgroundColor: decisionColors[decision] || decisionColors[""],
+                                minHeight: "4px",
+                              }}
+                              title={`${p.player_name}: ${decisionLabels[decision] || "—"}`}
+                            />
+                          );
+                        })
+                      ) : (
+                        <div
+                          className="flex-1 rounded-t"
+                          style={{
+                            height: "10%",
+                            backgroundColor: decisionColors[""],
+                            minHeight: "4px",
+                          }}
+                        />
+                      )}
+                    </div>
                     <span className="text-[9px] text-muted-foreground tabular-nums">
                       R{round.round_number}
                     </span>
@@ -253,7 +275,7 @@ export default function SessionDetailPage({
                 <span className="text-xs text-muted-foreground">No rounds played</span>
               )}
             </div>
-            <div className="flex flex-wrap gap-4 mt-3 text-[10px] text-muted-foreground">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[10px] text-muted-foreground">
               {Object.entries(decisionLabels).filter(([k]) => k !== "").map(([key, label]) => (
                 <span key={key} className="flex items-center gap-1">
                   <span

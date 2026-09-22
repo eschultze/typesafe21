@@ -72,7 +72,7 @@ export function Scoreboard() {
             <ScoreLine history={p.balance_history} />
             <span className="relative text-xs text-muted-foreground mb-1 z-10">{p.name}</span>
             <motion.span
-              key={p.balance}
+              key={`bal-${p.name}`}
               initial={{ scale: 1.2 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}

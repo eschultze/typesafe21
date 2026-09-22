@@ -215,6 +215,8 @@ Configuration:
 - `player_histories` — Per-player stats: `Record<string, { bets: number[], confidences: number[] }>` — tracks bet and confidence history for all players (Random, Basic, Jev, Laya)
 - `prev_bets` — Used to detect bet changes and trigger chip animations
 - `chipsAnimating` — Animation flag
+- `last_recorded_round` — Tracks most recently recorded round to prevent duplicate stat accumulation
+- `chipAnimTimeout` — Reference to chip animation timeout for cleanup (prevents overlapping timers)
 - `LastAction` — Typed discriminated union for previous round results (replaces `any`)
 - WebSocket integration via `sendAction()` and `updateState()`
 

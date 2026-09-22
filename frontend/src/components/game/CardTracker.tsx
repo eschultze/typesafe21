@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "motion/react";
 import { useGameStore } from "@/stores/gameStore";
 
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
@@ -35,12 +34,10 @@ export function CardTracker() {
 
             return (
               <div key={rank} className="flex-1 flex flex-col items-center gap-0.5">
-                <motion.div
-                  className="w-full rounded-t"
-                  initial={{ height: 0 }}
-                  animate={{ height: barHeight }}
-                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                <div
+                  className="w-full rounded-t transition-[height] duration-300 ease-out"
                   style={{
+                    height: `${barHeight}px`,
                     backgroundColor:
                       fillPct > 75
                         ? "var(--color-loss)"

@@ -1,4 +1,4 @@
-"""Blackjack basic strategy for 6-deck, dealer stands on soft 17, double after split allowed."""
+"""Blackjack basic strategy for 6-deck, dealer hits soft 17, double after split allowed."""
 
 _HARD: dict[tuple[int, int], str] = {}
 

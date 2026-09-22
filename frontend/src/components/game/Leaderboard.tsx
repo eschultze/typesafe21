@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 interface SingleTurnEntry {
   session_id: number;
+  player_name: string;
   round_number: number;
   bet: number;
   result: string;
@@ -12,6 +13,7 @@ interface SingleTurnEntry {
 
 interface SessionEntry {
   session_id: number;
+  player_name: string;
   final_balance: number;
   profit: number;
   pct: number;
@@ -58,55 +60,74 @@ export function Leaderboard() {
   if (!hasSingleTurn && !hasSessions) return null;
 
   return (
-    <div className="flex flex-col p-3 rounded-[10px] bg-card border border-border">
-      <span className="text-xs text-muted-foreground mb-2">Leaderboard</span>
+    <div className="flex flex-col gap-3 p-3 rounded-[10px] bg-card border border-border">
+      <span className="text-xs text-muted-foreground">Leaderboard</span>
 
       {hasSingleTurn && (
-        <div className="flex flex-col gap-1 mb-3">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
             Best Single Turn
           </span>
-          {data.single_turn.map((entry, i) => (
-            <div
-              key={`${entry.session_id}-${entry.round_number}`}
-              className="flex items-center justify-between text-xs"
-            >
-              <span className="text-muted-foreground tabular-nums">
-                #{i + 1} Session #{entry.session_id} Round {entry.round_number}
-              </span>
-              <span className="font-bold tabular-nums text-[var(--color-profit)]">
-                +${entry.profit}
-              </span>
-            </div>
-          ))}
+          <div className="flex flex-col gap-1.5">
+            {data.single_turn.map((entry, i) => (
+              <div
+                key={`${entry.session_id}-${entry.round_number}-${i}`}
+                className="flex items-center gap-1.5 text-xs"
+              >
+                <span className="text-muted-foreground/60 font-mono text-[10px] w-4 text-right shrink-0">
+                  {i + 1}
+                </span>
+                <span className="text-foreground font-medium min-w-0 truncate">
+                  {entry.player_name}
+                </span>
+                <span className="text-muted-foreground text-[10px] tabular-nums shrink-0 ml-auto">
+                  S{entry.session_id} &middot; R{entry.round_number}
+                </span>
+                <span className="font-bold tabular-nums text-[var(--color-profit)] shrink-0">
+                  +${entry.profit}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {hasSessions && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
             Best Sessions
           </span>
-          {data.sessions.map((entry, i) => (
-            <div
-              key={entry.session_id}
-              className="flex items-center justify-between text-xs"
-            >
-              <span className="text-muted-foreground tabular-nums">
-                #{i + 1} Session #{entry.session_id}:{" "}
-                {entry.total_rounds} {entry.total_rounds === 1 ? "round" : "rounds"}
-              </span>
-              <span
-                className={`font-bold tabular-nums ${
-                  entry.profit >= 0
-                    ? "text-[var(--color-profit)]"
-                    : "text-[var(--color-loss)]"
-                }`}
+          <div className="flex flex-col gap-1.5">
+            {data.sessions.map((entry, i) => (
+              <div
+                key={`${entry.session_id}-${i}`}
+                className="flex items-center gap-1.5 text-xs"
               >
-                {entry.profit >= 0 ? "+" : ""}${entry.profit} ({entry.pct}%)
-              </span>
-            </div>
-          ))}
+                <span className="text-muted-foreground/60 font-mono text-[10px] w-4 text-right shrink-0">
+                  {i + 1}
+                </span>
+                <span className="text-foreground font-medium min-w-0 truncate">
+                  {entry.player_name}
+                </span>
+                <span className="text-muted-foreground text-[10px] tabular-nums shrink-0 ml-auto">
+                  S{entry.session_id} &middot;{" "}
+                  {entry.total_rounds === 1
+                    ? "1 round"
+                    : `${entry.total_rounds} rounds`}
+                </span>
+                <span
+                  className={`font-bold tabular-nums shrink-0 ${
+                    entry.profit >= 0
+                      ? "text-[var(--color-profit)]"
+                      : "text-[var(--color-loss)]"
+                  }`}
+                >
+                  {entry.profit >= 0 ? "+" : ""}${entry.profit}{" "}
+                  <span className="text-[10px] opacity-80">({entry.pct}%)</span>
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

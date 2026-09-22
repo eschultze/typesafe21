@@ -122,7 +122,7 @@ export default function Home() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-[var(--space-xl)] gap-y-[var(--space-sm)] text-sm text-muted-foreground">
           <span>6-deck shoe</span>
           <span>Auto-reshuffle at 25%</span>
-          <span>Dealer stands S17</span>
+          <span>Dealer hits soft 17</span>
           <span>Blackjack pays 3:2</span>
           <span>Double down allowed</span>
           <span>Split pairs allowed</span>

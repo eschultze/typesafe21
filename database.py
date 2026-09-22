@@ -208,6 +208,7 @@ def get_top_single_turn_profits() -> list[dict]:
             WITH you_rounds AS (
                 SELECT
                     r.session_id,
+                    pr.player_name,
                     r.round_number,
                     pr.bet,
                     pr.result,
@@ -223,6 +224,7 @@ def get_top_single_turn_profits() -> list[dict]:
             )
             SELECT
                 session_id,
+                pr.player_name,
                 round_number,
                 bet,
                 result,
@@ -231,6 +233,7 @@ def get_top_single_turn_profits() -> list[dict]:
                 balance_after - COALESCE(prev_balance, 100) AS profit
             FROM you_rounds
             WHERE prev_balance IS NOT NULL
+                AND profit > 0
             ORDER BY profit DESC
             LIMIT 5
         """)
@@ -244,6 +247,7 @@ def get_top_session_profits() -> list[dict]:
             WITH you_last AS (
                 SELECT
                     r.session_id,
+                    pr.player_name,
                     pr.balance_after AS final_balance,
                     s.total_rounds,
                     ROW_NUMBER() OVER (
@@ -257,12 +261,14 @@ def get_top_session_profits() -> list[dict]:
             )
             SELECT
                 session_id,
+                player_name,
                 final_balance,
                 final_balance - 100 AS profit,
                 ROUND((final_balance - 100.0) / 100.0 * 100, 1) AS pct,
                 total_rounds
             FROM you_last
             WHERE rn = 1
+                AND final_balance - 100 > 0
             ORDER BY profit DESC
             LIMIT 5
         """)
