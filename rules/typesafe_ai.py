@@ -4,7 +4,12 @@ import time
 
 import requests
 from dotenv import load_dotenv
-from rules.ai_shared import build_bet_state, process_bet_result
+from rules.ai_shared import (
+    build_bet_state,
+    process_bet_result,
+    chance_to_bust_on_next_draw,
+    dealer_bust_probability,
+)
 from rules.cards import Hand, TrackedDeck
 
 load_dotenv()
@@ -63,21 +68,23 @@ def get_ai_decision(
     ranks = [card.rank for card in player_hand.cards]
     is_pair = len(player_hand.cards) == 2 and ranks[0] == ranks[1]
 
+    # Index 0 is the face-up card. Index 1 is the hole card and is hidden from
+    # the UI (see GameSession.get_state), so the player only knows cards[0].
     dealer_cards = [str(card) for card in dealer_hand.cards]
-    dealer_upcard = dealer_cards[1] if len(dealer_cards) > 1 else dealer_cards[0]
-    dealer_upcard_value = (
-        dealer_hand.cards[1].value if len(dealer_hand.cards) > 1 else dealer_hand.cards[0].value
-    )
+    dealer_upcard = dealer_cards[0] if dealer_cards else "?"
+    dealer_upcard_value = dealer_hand.cards[0].value if dealer_hand.cards else 0
 
     remaining = deck.get_remaining_by_rank()
 
-    # Approximate dealer bust probabilities by upcard (basic strategy estimates).
-    # TODO: Consider adjusting by ±1% based on true_count direction
-    # (positive count = slightly lower bust prob, negative = slightly higher).
-    dealer_bust_pct = {
-        2: 35, 3: 37, 4: 40, 5: 42, 6: 42,
-        7: 26, 8: 24, 9: 23, 10: 23, 11: 17,
-    }
+    # The dealer's hole card has been dealt (so it is absent from `remaining`)
+    # but is unknown to the player, so add it back to the pool the dealer bust
+    # probability draws from. The upcard is visible and already excluded.
+    unseen = dict(remaining)
+    if len(dealer_hand.cards) > 1:
+        hole_rank = dealer_hand.cards[1].rank
+        unseen[hole_rank] = unseen.get(hole_rank, 0) + 1
+
+    dealer_bust = dealer_bust_probability(dealer_upcard_value, unseen)
 
     state = {
         "player_hand": cards,
@@ -87,12 +94,16 @@ def get_ai_decision(
         "num_cards": len(player_hand.cards),
         "dealer_upcard": dealer_upcard,
         "dealer_upcard_value": dealer_upcard_value,
-        "dealer_bust_probability_pct": dealer_bust_pct.get(dealer_upcard_value, 25),
+        "dealer_bust_probability_pct": dealer_bust,
+        "our_chance_to_bust_on_next_draw": chance_to_bust_on_next_draw(
+            player_hand.value, player_hand.is_soft, remaining
+        ),
         "deck_cards_remaining": deck.remaining,
         "cards_dealt_this_shoe": deck.get_cards_since_reshuffle(),
         "shoe_penetration_pct": round((deck.get_cards_since_reshuffle() / deck.total_cards) * 100, 1),
         "running_count": deck.running_count,
         "true_count": deck.true_count,
+        "remaining_by_rank": remaining,
         "aces_remaining": remaining.get("A", 0),
         "tens_remaining": remaining.get("10", 0) + remaining.get("J", 0) + remaining.get("Q", 0) + remaining.get("K", 0),
         "session_wins": session_wins,
@@ -138,11 +149,14 @@ def get_ai_decision(
                 "6+6 vs dealer 6 — split 6s against weak dealer",
             ],
         },
-        "other": "None of the above actions fits this situation",
     }
 
-    instructions = f"What is the best blackjack action? Consider: your hand value ({player_hand.value}{'soft' if player_hand.is_soft else 'hard'}), dealer upcard ({dealer_upcard}={dealer_upcard_value}), dealer bust probability ({dealer_bust_pct.get(dealer_upcard_value, 25)}%), true count ({deck.true_count:+.1f}), and shoe composition."
+    instructions = f"What is the best blackjack action? Consider: your hand value ({player_hand.value}{'soft' if player_hand.is_soft else 'hard'}), dealer upcard ({dealer_upcard}={dealer_upcard_value}), dealer bust probability ({dealer_bust}%), true count ({deck.true_count:+.1f}), and shoe composition."
 
+    # Only offer the actions that are actually legal this turn. There is no
+    # "other" option: the four actions cover every legal move, and an
+    # out-of-vocabulary answer is handled explicitly below rather than
+    # silently falling through.
     if not can_double:
         del criteria["double"]
     if not can_split:
@@ -160,13 +174,23 @@ def get_ai_decision(
         },
     }
 
+    started = time.perf_counter()
     data = _api_request(payload)
+    latency_ms = round((time.perf_counter() - started) * 1000, 1)
 
+    usage = data.get("usage", {}) or {}
     action_answer = data.get("answers", {}).get("action", {})
+    decision = action_answer.get("choice", "stand")
+    if decision not in criteria:
+        # The model answered outside the legal set; standing is the safe,
+        # non-destructive fallback.
+        decision = "stand"
     return {
-        "decision": action_answer.get("choice", "stand"),
+        "decision": decision,
         "confidence": action_answer.get("confidence", 0.0),
         "probabilities": action_answer.get("probabilities", {}),
+        "latency_ms": latency_ms,
+        "tokens": usage.get("input_tokens", 0) + usage.get("output_tokens", 0),
     }
 
 
@@ -195,10 +219,16 @@ def get_ai_bet(
         "questions": questions,
     }
 
+    started = time.perf_counter()
     data = _api_request(payload)
+    latency_ms = round((time.perf_counter() - started) * 1000, 1)
 
+    usage = data.get("usage", {}) or {}
     bet_answer = data.get("answers", {}).get("bet_sizing", {})
-    return process_bet_result(bet_answer, min_bet, balance, true_count, session_wins, session_losses)
+    result = process_bet_result(bet_answer, min_bet, balance, true_count, session_wins, session_losses)
+    result["latency_ms"] = latency_ms
+    result["tokens"] = usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
+    return result
 
 
 def _score_to_bet(score: float, min_bet: int, balance: int, true_count: int = 0) -> int:

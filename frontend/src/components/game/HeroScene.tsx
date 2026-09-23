@@ -10,7 +10,6 @@ const CardShuffle = dynamic(
 import { useGameStore } from "@/stores/gameStore";
 
 export function HeroScene() {
-  const phase = useGameStore((s) => s.state.phase);
   const roundNumber = useGameStore((s) => s.state.round_number);
 
   if (roundNumber > 0) return null;

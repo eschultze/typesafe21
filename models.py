@@ -24,6 +24,7 @@ class PlayerState(BaseModel):
     pushes: int
     hand: HandModel
     balance_history: list[int]
+    can_play: bool = True
 
 
 class ShoeState(BaseModel):
@@ -55,6 +56,8 @@ class BetResult(BaseModel):
     is_ai: bool = False
     reasoning: str = ""
     confidence: float = 0.0
+    latency_ms: float = 0.0
+    tokens: int = 0
 
 
 class HandResult(BaseModel):
@@ -67,10 +70,11 @@ class HandResult(BaseModel):
     decision: str = ""
     bet: int = 0
     balance: int = 0
+    latency_ms: float = 0.0
+    tokens: int = 0
+    decisions: int = 0
 
 
 class RoundResultModel(BaseModel):
     dealer_hand: HandModel
     hands: list[HandResult]
-    ai_confidence: float = 0.0
-    ai_decision: str = ""

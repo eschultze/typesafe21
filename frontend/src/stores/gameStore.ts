@@ -24,6 +24,7 @@ export interface PlayerData {
   pushes: number;
   hand: HandData;
   balance_history: number[];
+  can_play: boolean;
 }
 
 export interface ShoeData {
@@ -142,7 +143,8 @@ export const useGameStore = create<GameStore>()(
         if (betsChanged && state.phase !== "idle") {
           updates.prev_bets = newBets;
           updates.chipsAnimating = true;
-          if (get().chipAnimTimeout) clearTimeout(get().chipAnimTimeout);
+          const timeout = get().chipAnimTimeout;
+          if (timeout) clearTimeout(timeout);
           updates.chipAnimTimeout = setTimeout(() => {
             if (get().chipsAnimating) set({ chipsAnimating: false, chipAnimTimeout: null });
           }, state.auto_play ? 150 : 300);
@@ -152,7 +154,8 @@ export const useGameStore = create<GameStore>()(
         if (state.phase === "idle" && prev.phase !== "idle") {
           updates.prev_bets = state.players.map(() => 0);
           updates.chipsAnimating = true;
-          if (get().chipAnimTimeout) clearTimeout(get().chipAnimTimeout);
+          const timeout = get().chipAnimTimeout;
+          if (timeout) clearTimeout(timeout);
           updates.chipAnimTimeout = setTimeout(() => set({ chipsAnimating: false, chipAnimTimeout: null }), 200);
         }
 

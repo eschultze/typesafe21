@@ -181,7 +181,7 @@ export default function SessionDetailPage({
                       const height = result === "win" ? "100%" : result === "lose" ? "60%" : "30%";
                       return (
                         <div
-                          key={p.player_index}
+                          key={`${round.id}-${p.player_index}`}
                           className="flex-1 rounded-t transition-[height] duration-300 ease-out"
                           style={{
                             height,
@@ -243,7 +243,7 @@ export default function SessionDetailPage({
                           const decision = p.decision || "";
                           return (
                             <div
-                              key={p.player_index}
+                              key={`${round.id}-${p.player_index}`}
                               className="flex-1 rounded-t transition-[height] duration-300 ease-out"
                               style={{
                                 height: decision ? "100%" : "10%",
@@ -307,7 +307,7 @@ export default function SessionDetailPage({
                 <div className="flex flex-wrap gap-2">
                   {round.players.map((p) => (
                     <span
-                      key={p.player_index}
+                      key={`${round.id}-${p.player_index}`}
                       className="text-xs px-2 py-0.5 rounded-full border tabular-nums"
                       style={{
                         borderColor: resultColors[p.result || "push"],

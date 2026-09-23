@@ -22,7 +22,7 @@ export function WinSound() {
 
     const { result } = lastAction;
     const anyAIWon = result?.hands?.some(
-      (h: any) => h.is_ai && h.result === "win"
+      (h) => h.is_ai && h.result === "win"
     );
 
     if (anyAIWon && audioRef.current) {

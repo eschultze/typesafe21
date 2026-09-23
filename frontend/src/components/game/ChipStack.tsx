@@ -65,13 +65,11 @@ function PlayerChips({
   bet,
   animating,
   autoPlay,
-  playerName,
   isHero,
 }: {
   bet: number;
   animating: boolean;
   autoPlay: boolean;
-  playerName: string;
   isHero: boolean;
 }) {
   const chips = breakIntoChips(bet);
@@ -114,7 +112,6 @@ export function ChipStack() {
           bet={p.current_bet}
           animating={animating}
           autoPlay={autoPlay}
-          playerName={p.name}
           isHero={i === 0}
         />
       ))}

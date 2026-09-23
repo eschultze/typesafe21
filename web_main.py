@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import traceback
 from contextlib import asynccontextmanager
 
@@ -19,6 +20,10 @@ game_manager = GameManager()
 async def lifespan(app: FastAPI):
     import database as db
     db.init_db()
+    # Warm up the local Laya model in a background thread so the first
+    # game round doesn't stall while weights load (~30s one-time per process).
+    from rules.laya_ai import _get_agent
+    asyncio.get_running_loop().run_in_executor(None, _get_agent)
     yield
 
 
@@ -26,7 +31,7 @@ app = FastAPI(title="TypeSafe21", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -57,6 +62,12 @@ async def leaderboard():
         "single_turn": db.get_top_single_turn_profits(),
         "sessions": db.get_top_session_profits(),
     }
+
+
+@app.get("/api/benchmark")
+async def benchmark_endpoint(session_id: int | None = None):
+    import benchmark
+    return await asyncio.to_thread(benchmark.build_benchmark, session_id)
 
 
 @app.websocket("/ws/{game_id}")
@@ -95,15 +106,19 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
                     "state": state,
                 })
 
-            elif action == "continue_game":
-                state = session.continue_game()
+            elif action == "clear_database":
+                # Wipe all persisted history, then start a fresh session so the
+                # in-memory state does not reference a deleted session row.
+                import database as db
+                await asyncio.to_thread(db.clear_database)
+                state = session.new_game()
                 await manager.broadcast(game_id, {
                     "type": "state_update",
                     "state": state,
                 })
 
             elif action == "play_round":
-                if session.phase != "idle":
+                if session.phase != "idle" or session.auto_play:
                     await websocket.send_json({"type": "error", "message": "Cannot play round: game is not in idle phase"})
                     continue
                 async def broadcast(msg):

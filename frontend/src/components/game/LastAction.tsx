@@ -23,7 +23,7 @@ export function LastAction() {
       >
         <div className="text-xs text-muted-foreground mb-2">Round Result</div>
         <div className="flex flex-wrap gap-2">
-          {result?.hands?.map((h: any, i: number) => (
+          {result?.hands?.map((h, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, scale: 0.8 }}

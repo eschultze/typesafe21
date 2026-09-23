@@ -28,7 +28,7 @@ function breakIntoChips(bet: number): number[] {
 }
 
 function seededRandom(seed: number) {
-  let x = Math.sin(seed * 9301 + 49297) * 49297;
+  const x = Math.sin(seed * 9301 + 49297) * 49297;
   return x - Math.floor(x);
 }
 
@@ -119,6 +119,11 @@ export function PlayerHand({ playerIndex }: PlayerHandProps) {
           )}
           {hand.is_bust && (
             <Badge variant="destructive">Bust</Badge>
+          )}
+          {!player.can_play && (
+            <Badge variant="outline" className="text-muted-foreground border-muted-foreground/40">
+              Out
+            </Badge>
           )}
           <motion.span
             key={hand.value}

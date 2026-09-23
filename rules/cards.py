@@ -62,9 +62,12 @@ class Hand:
             return self._soft_cache
         raw_total = sum(card.value for card in self.cards)
         aces = sum(1 for card in self.cards if card.rank == "A")
-        if aces == 0 or raw_total > 21:
+        if aces == 0:
             self._soft_cache = False
             return False
+        # Drop aces from 11 to 1 as needed, then the hand is still soft if at
+        # least one ace remains counted as 11. This handles multi-ace hands
+        # whose raw total exceeds 21 (e.g. A+A+9 is soft 21, not hard).
         adjusted = raw_total
         temp_aces = aces
         while adjusted > 21 and temp_aces:

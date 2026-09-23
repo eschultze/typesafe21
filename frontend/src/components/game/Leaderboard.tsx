@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { usePolledJson } from "@/hooks/usePolledJson";
 
 interface SingleTurnEntry {
   session_id: number;
@@ -26,32 +26,8 @@ interface LeaderboardData {
 }
 
 export function Leaderboard() {
-  const [data, setData] = useState<LeaderboardData | null>(null);
-  const [error, setError] = useState(false);
+  const data = usePolledJson<LeaderboardData>("/api/leaderboard", 5000);
 
-  useEffect(() => {
-    let active = true;
-
-    async function fetchLeaderboard() {
-      try {
-        const res = await fetch("/api/leaderboard");
-        if (res.ok && active) {
-          setData(await res.json());
-        }
-      } catch {
-        if (active) setError(true);
-      }
-    }
-
-    fetchLeaderboard();
-    const interval = setInterval(fetchLeaderboard, 5000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, []);
-
-  if (error) return null;
   if (!data) return null;
 
   const hasSingleTurn = data.single_turn.length > 0;

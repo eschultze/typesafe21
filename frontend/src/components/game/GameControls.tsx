@@ -12,11 +12,14 @@ export function GameControls() {
   const sendAction = useGameStore((s) => s.sendAction);
   const connected = useGameStore((s) => s.connected);
   const [confirmNewGame, setConfirmNewGame] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
     };
   }, []);
 
@@ -31,6 +34,17 @@ export function GameControls() {
     if (timerRef.current) clearTimeout(timerRef.current);
     setConfirmNewGame(false);
     sendAction("new_game");
+  };
+
+  const handleClearDatabase = () => {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      clearTimerRef.current = setTimeout(() => setConfirmClear(false), 4000);
+      return;
+    }
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+    setConfirmClear(false);
+    sendAction("clear_database");
   };
 
   return (
@@ -72,6 +86,15 @@ export function GameControls() {
             variant="outline"
           >
             End Session
+          </Button>
+
+          <Button
+            onClick={handleClearDatabase}
+            disabled={!connected}
+            variant="destructive"
+            className={confirmClear ? "bg-[var(--color-destructive)] text-white border-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/90" : ""}
+          >
+            {confirmClear ? "Confirm Clear?" : "Clear Database"}
           </Button>
 
           {[1, 5, 10].map((n) => (

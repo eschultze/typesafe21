@@ -11,7 +11,7 @@ import { GameControls } from "@/components/game/GameControls";
 import { LastAction } from "@/components/game/LastAction";
 import { HeroScene } from "@/components/game/HeroScene";
 import { WinSound } from "@/components/game/WinSound";
-import { StatsPanel } from "@/components/game/StatsPanel";
+import { BenchmarkPanel } from "@/components/game/BenchmarkPanel";
 import { CardTracker } from "@/components/game/CardTracker";
 import { Leaderboard } from "@/components/game/Leaderboard";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +62,7 @@ export default function GameBoard() {
             <LastAction />
             <Scoreboard />
             <ShoeIndicator />
-            <StatsPanel />
+            <BenchmarkPanel />
             <CardTracker />
             <Leaderboard />
           </div>
@@ -100,7 +100,7 @@ export default function GameBoard() {
           <div className="w-72 xl:w-80 flex flex-col gap-4 flex-shrink-0">
             <LastAction />
             <ShoeIndicator />
-            <StatsPanel />
+            <BenchmarkPanel />
             <CardTracker />
             <Leaderboard />
           </div>

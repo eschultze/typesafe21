@@ -44,9 +44,9 @@ for dc in range(2, 12):
     _SOFT[(6, dc)] = 'D' if 3 <= dc <= 6 else 'H'
 
 for dc in range(2, 12):
-    if 4 <= dc <= 6:
+    if 3 <= dc <= 6:
         _SOFT[(7, dc)] = 'D'
-    elif dc in (2, 3, 7, 8, 11):
+    elif dc in (2, 7, 8):
         _SOFT[(7, dc)] = 'S'
     else:
         _SOFT[(7, dc)] = 'H'
@@ -120,8 +120,8 @@ def _is_pair(hand) -> bool:
 
 def _dealer_upcard_value(dealer_hand) -> int:
     cards = dealer_hand.cards if hasattr(dealer_hand, 'cards') else dealer_hand
-    if len(cards) > 1:
-        return _card_value(cards[1])
+    # Index 0 is the face-up card; index 1 is the hole card (hidden from the
+    # player). Basic strategy must only see the upcard.
     return _card_value(cards[0])
 
 

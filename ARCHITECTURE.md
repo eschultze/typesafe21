@@ -75,7 +75,9 @@ Extracted from `typesafe_ai.py` and `laya_ai.py` to eliminate duplication. Conta
 
 - `build_bet_state()` — Constructs the full state dictionary sent to both AI engines (balance, count, shoe position, opponent balances, session performance, shoe composition)
 - `process_bet_result()` — Processes the AI's Score response into a bet amount using balance-based percentages (Score 0 → 5%, 1 → 15%, 2 → 25%, 3 → 35%, 4 → 50%)
-- `build_bet_reasoning()` — Generates the dynamic hint for bet sizing based on true count
+- `build_bet_reasoning()` — Generates the human-readable bet summary shown in the UI
+- `chance_to_bust_on_next_draw()` — Percent chance the next card busts the player's hand, from the remaining shoe
+- `dealer_bust_probability()` — Exact dealer bust probability from the unseen shoe (remaining + unknown hole card), respecting H17
 
 Both AI modules import and call these shared functions, keeping only their engine-specific API calls locally.
 
@@ -84,11 +86,11 @@ Both AI modules import and call these shared functions, keeping only their engin
 Two functions, two TypeSafe API calls per round:
 
 **`get_ai_decision()`** — Action selection
-- Sends full game state (player hand, dealer upcard, counts, shoe composition)
-- Uses **Choice** primitive with 4 options: `hit`, `stand`, `double`, `split`
+- Sends full game state (player hand, dealer **upcard** (index 0), dealer-bust probability, our chance to bust on next draw, counts, full shoe composition)
+- Uses **Choice** primitive with 4 options: `hit`, `stand`, `double`, `split` (illegal options are removed; there is no `other` option — an out-of-vocabulary answer falls back to `stand`)
 - Structured criteria with `what`, `not_for`, and `examples` for each action
 - No basic strategy hints — AI decides autonomously
-- Returns: decision, confidence, probabilities
+- Returns: decision, confidence, probabilities, latency_ms, tokens
 - Retries on timeout, connection error, HTTP 5xx/429, and malformed responses
 
 **`get_ai_bet()`** — Bet sizing
@@ -111,7 +113,7 @@ Same interface as `typesafe_ai.py`, using the [Laya](https://github.com/NandhaKi
 
 - Complete lookup tables for 6-deck, dealer hits soft 17
 - Hard totals, soft totals, pairs
-- `get_basic_strategy()` — Returns H/S/D/P recommendation
+- `get_basic_strategy()` — Returns H/S/D/P recommendation, using **only the dealer upcard** (`cards[0]`); the hole card is never consulted
 - `get_basic_strategy_action()` — Returns actionable decision (hit/stand/double/split)
 - Used by `BasicStrategyPlayer` for gameplay and displayed for reference
 
@@ -158,11 +160,21 @@ player_rounds (
     bet INTEGER,
     confidence REAL,
     decision TEXT,
-    balance_after INTEGER
+    balance_after INTEGER,
+    latency_ms REAL DEFAULT 0,      -- avg per AI decision this round
+    tokens INTEGER DEFAULT 0,       -- avg tokens per AI decision this round
+    decisions INTEGER DEFAULT 0,    -- AI calls this round (bet + plays)
+    true_count REAL                 -- true count when bets were placed
 )
 ```
 
-Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_last_incomplete_session`, `get_round_count`, `get_session_stats`, `get_all_sessions`, `get_session_rounds`, `clear_database`, `get_top_single_turn_profits`, `get_top_session_profits`
+`init_db()` migrates older databases in place via `_ensure_columns()` (adds any missing benchmark columns with `ALTER TABLE`).
+
+Functions: `init_db`, `create_session`, `save_round`, `complete_session`, `get_last_incomplete_session`, `get_round_count`, `get_session_stats`, `get_all_sessions`, `get_session_rounds`, `get_benchmark_rows`, `clear_database`, `get_top_single_turn_profits`, `get_top_session_profits`
+
+### `benchmark.py` — Benchmark Aggregation
+
+Single source of truth for Jev-vs-Laya stats, served by `GET /api/benchmark` (all-time) and `GET /api/benchmark?session_id=N` (one session). `build_benchmark()` collapses raw rows into one record per `(session, round, player)` (splits aggregated; round-end balance wins), derives per-round profit from balance deltas, and returns per-player metrics, head-to-head (paired per-round diff + 95% CI), and true-count buckets. Keeping aggregation server-side means the session and all-time scopes can never diverge.
 
 Configuration:
 - WAL mode enabled (`PRAGMA journal_mode=WAL`) for concurrent read/write
@@ -173,13 +185,15 @@ Configuration:
 
 ### `web_main.py` — FastAPI App
 
-- REST endpoints: `GET /api/health`, `GET /api/history`, `GET /api/history/{id}`, `GET /api/leaderboard`
+- REST endpoints: `GET /api/health`, `GET /api/history`, `GET /api/history/{id}`, `GET /api/leaderboard`, `GET /api/benchmark?session_id=`
 - WebSocket endpoint: `/ws/{game_id}`
 - WebSocket message validation: rejects non-dict payloads, unknown actions, and invalid `delay_ms` values (clamped to 100-5000ms)
+- CORS origins configurable via `CORS_ORIGINS` (default `*`)
 - Auto-play task stored per session, cancelled before re-creating and on disconnect
 - Actions handled via WebSocket JSON messages:
   - `new_game` — Reset deck, players, start fresh session
-  - `play_round` — Play one complete round (bet, deal, player turns, dealer, settle). Requires `phase == "idle"` — rejected if a round is in progress.
+  - `clear_database` — Truncate all persisted history, then start a fresh session
+  - `play_round` — Play one complete round. Rejected unless `phase == "idle"` and auto-play is off.
   - `auto_play` — Start/stop auto-play loop with configurable delay and round limit
   - `end_session` — Mark session complete, start new game
   - `get_state` — Request current state
@@ -188,19 +202,20 @@ Configuration:
 
 - `GameManager` — Pool of `GameSession` instances by game ID. Sessions are cleaned up on disconnect.
 - `GameSession` — Wraps game logic for web: converts state to Pydantic models, manages auto-play loop
-  - `play_round()` is async — DB calls and blocking AI calls wrapped in `asyncio.to_thread()` to avoid blocking the event loop
+  - `play_round()` is async and guarded by an `asyncio.Lock`, so a manual round and the auto-play loop (or two clients) cannot mutate the session concurrently
+  - DB calls and blocking AI calls are wrapped in `asyncio.to_thread()` to avoid blocking the event loop
+  - If a round raises (e.g. the remote AI is down), the round is **rolled back** (balances/wins/history restored) and the session stays alive with an `error` `last_action`, instead of tearing down the session
   - Intermediate state broadcasts between phases (betting, dealing, player_turn, dealer_turn) so frontend sees phase transitions
-  - Auto-play loop catches exceptions, logs them, and broadcasts error state to clients
   - Creates session before saving rounds to prevent FK violations
-- Delegates history/stats to `database.py`
+- Delegates history/stats/benchmark to `database.py` and `benchmark.py`
 
 ### `models.py` — Pydantic Models
 
 - `GameState` — Full game state (phase, players, dealer, shoe, last_action, etc.)
-- `PlayerState` — Per-player state (name, balance, hand, wins/losses/pushes)
+- `PlayerState` — Per-player state (name, balance, hand, wins/losses/pushes, `can_play` for the "Out" badge)
 - `HandModel` — Hand with cards, value, soft/bust/blackjack flags
 - `ShoeState` — Shoe state (remaining, counts, played_ranks)
-- `BetResult`, `HandResult`, `RoundResultModel` — Round result models
+- `BetResult`, `HandResult` — Round models, including `latency_ms`, `tokens`, and `decisions`
 
 ### `connection_manager.py` — WebSocket Manager
 
@@ -230,7 +245,7 @@ Configuration:
 - `ShoeIndicator` — Progress bar (accent) showing shoe depletion + true count badge
 - `BalanceChart` — SVG line charts per-player balance over time (player-agnostic via `player_histories`)
 - `CardTracker` — Bar chart showing card composition by rank with themed bar colors
-- `StatsPanel` — Per-player stats panels (avg bet, confidence, rounds) via `player_histories`
+- `BenchmarkPanel` — Jev-vs-Laya scorecard with This-session / All-time scopes, polling `/api/benchmark` (Edge, win rate, calibration, latency, tokens, betting-by-count, risk)
 - `LastAction` — Displays previous round's results with profit/loss badges (AnimatePresence keyed for exit animations)
 - `WinSound` — Plays cash register sound on AI win (proper cleanup on unmount)
 - `Leaderboard` — Top players across sessions (fetched via Next.js proxy)
@@ -286,7 +301,11 @@ Configuration:
 
 5. **Rich state** — AI sees shoe composition, opponent balances, and session performance.
 
-6. **No fallbacks** — If the API is down, the game stops. This forces the AI to actually play rather than silently reverting to local rules. Laya runs locally so it's always available.
+6. **No silent fallbacks** — If the API is down, the AI does not quietly revert to local rules; the round is rolled back and surfaced as an error, and auto-play stops. The session stays alive so a transient failure doesn't destroy the run. Laya runs locally so it's always available.
+
+10. **Fair comparison** — All players receive the same starting hand, and the benchmark normalizes by amount wagered (edge) and uses paired per-round Jev-vs-Laya diffs with a 95% CI, so differing bet sizes and variance don't distort the verdict.
+
+11. **Natural blackjack vs split 21** — A split hand that reaches 21 in two cards is *not* a natural: it pays 1:1 and loses to a dealer natural. `determine_winner`/`get_payout_multiplier` take an `allow_player_natural` flag that the split loop sets to `False`.
 
 7. **Dual AI engines** — Jev (remote, ~240ms) and Laya (local, ~33ms GPU) use identical prompts with Choice and Score primitives, enabling direct comparison of remote vs local inference.
 

@@ -55,7 +55,25 @@ The AIs decide **autonomously** — no basic strategy hints or bias are sent. Ba
 - **End Session** — Complete the current session (saved to history)
 - **Auto Play** — Play unlimited rounds automatically (500ms delay)
 - **+1 / +5 / +10 rounds** — Play a fixed number of rounds automatically
+- **Clear Database** — Wipe all persisted history (with a second confirmation) and start fresh
 - **History** — Browse completed sessions at `/history`
+
+## Benchmarking
+
+The game page has a **Benchmark** panel comparing Jev vs Laya, with two scopes:
+
+- **This session** — the current live session
+- **All time** — every persisted round across all sessions
+
+Metrics (all computed server-side from `/api/benchmark`, so the two scopes stay consistent):
+
+| Tab | Metrics |
+|-----|---------|
+| **Scorecard** | Edge (profit ÷ wagered), net profit, win rate, W/P/L, avg bet, confidence, calibration gap, latency p50/p95, tokens/decision, AI calls/round, head-to-head paired diff with 95% CI |
+| **Betting** | Avg/max bet, bet-vs-true-count buckets (avg bet + EV), count exploitation |
+| **Risk** | Max drawdown, volatility/round, return/risk, Brier score |
+
+Latency, token usage, decision counts, and true-count-at-bet are persisted per player-round (`player_rounds.latency_ms/tokens/decisions/true_count`), so all-time stats accumulate across reloads and sessions.
 
 ## AI Engines
 
@@ -97,6 +115,7 @@ The app reads these environment variables:
 | `TYPESAFE_API_KEY` | — | TypeSafe API key |
 | `TYPESAFE_API_URL` | — | TypeSafe API endpoint |
 | `TYPESAFE_MODEL` | `jev-latest` | TypeSafe model (used by Jev AI) |
+| `CORS_ORIGINS` | `*` | Comma-separated allowed origins for the backend |
 
 ## File Structure
 

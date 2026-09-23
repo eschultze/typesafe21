@@ -13,6 +13,8 @@ class BetInfo:
     is_ai: bool = False
     reasoning: str = ""
     confidence: float = 0.0
+    latency_ms: float = 0.0
+    tokens: int = 0
 
 
 @dataclass
@@ -26,6 +28,9 @@ class PlayerHandResult:
     decision: str = ""
     bet: int = 0
     balance: int = 0
+    latency_ms: float = 0.0
+    tokens: int = 0
+    decisions: int = 0
 
 
 @dataclass
@@ -34,18 +39,23 @@ class RoundResult:
     round_number: int
     dealer_hand: Hand
     hands: list[PlayerHandResult] = field(default_factory=list)
-    ai_confidence: float = 0.0
-    ai_decision: str = ""
 
 
-def determine_winner(player_hand: Hand, dealer_hand: Hand) -> str:
+def determine_winner(
+    player_hand: Hand,
+    dealer_hand: Hand,
+    allow_player_natural: bool = True,
+) -> str:
+    # A split hand (or any hand that did not start as the original two cards)
+    # can reach 21 with two cards but is not a natural blackjack.
+    player_natural = allow_player_natural and player_hand.is_blackjack
     if player_hand.is_bust:
         return "lose"
     if dealer_hand.is_bust:
         return "win"
-    if player_hand.is_blackjack and not dealer_hand.is_blackjack:
+    if player_natural and not dealer_hand.is_blackjack:
         return "win"
-    if dealer_hand.is_blackjack and not player_hand.is_blackjack:
+    if dealer_hand.is_blackjack and not player_natural:
         return "lose"
     if player_hand.value > dealer_hand.value:
         return "win"
@@ -55,8 +65,12 @@ def determine_winner(player_hand: Hand, dealer_hand: Hand) -> str:
         return "push"
 
 
-def get_payout_multiplier(result: str, player_hand: Hand) -> float:
-    if result == "win" and player_hand.is_blackjack:
+def get_payout_multiplier(
+    result: str,
+    player_hand: Hand,
+    allow_player_natural: bool = True,
+) -> float:
+    if result == "win" and allow_player_natural and player_hand.is_blackjack:
         return 1.5
     return 1.0
 
@@ -71,10 +85,15 @@ def do_bets(
     opponent_balances = [p.balance for p in players if not isinstance(p, (AIPlayer, LayaPlayer))]
 
     for player in players:
+        # A player who cannot cover the minimum sits the round out. Clear any
+        # stale bet first so it cannot be carried forward and settled as a live
+        # hand (which previously let a broke player keep playing for free).
+        player.current_bet = 0
+        player.reset_round_stats()
         if not player.can_play():
             continue
 
-        if isinstance(player, AIPlayer):
+        if isinstance(player, (AIPlayer, LayaPlayer)):
             bet = player.decide_bet(deck, opponent_balances=opponent_balances)
         else:
             bet = player.decide_bet(deck)
@@ -85,10 +104,12 @@ def do_bets(
             bet=bet,
             is_ai=isinstance(player, (AIPlayer, LayaPlayer)),
         )
-        if isinstance(player, AIPlayer):
+        if isinstance(player, (AIPlayer, LayaPlayer)):
             bet_info = player.last_bet_info
             info.reasoning = bet_info.get("reasoning", "")
             info.confidence = bet_info.get("confidence", 0.0)
+            info.latency_ms = bet_info.get("latency_ms", 0.0)
+            info.tokens = bet_info.get("tokens", 0)
 
         bets.append(info)
 
@@ -139,6 +160,9 @@ def play_player_hand(
     can_split = (
         cards_dealt == 2
         and player.hand.cards[0].rank == player.hand.cards[1].rank
+        # Splitting costs a second bet equal to the first, so the player must
+        # be able to cover it (balance is already net of the first bet).
+        and player.balance >= player.current_bet
     )
 
     while True:
@@ -174,6 +198,10 @@ def play_player_hand(
             original_bet = player.current_bet
             splitting_aces = card1.rank == "A"
 
+            # The second hand costs another bet, equal to the first. The first
+            # bet was already deducted by place_bet.
+            player.balance -= original_bet
+
             hand1 = Hand()
             hand1.add_card(card1)
             card = deck.deal()
@@ -201,7 +229,11 @@ def play_player_hand(
             else:
                 decision2, conf2, dec2 = _play_hand_loop(player, deck, dealer_hand, needs_extra_args)
             player.split_hands.append((hand2, original_bet, dec2, conf2))
+
+            # Both hands now live in split_hands. Clear the main hand and its
+            # bet so settle_round does not settle an empty third hand.
             player.hand = Hand()
+            player.current_bet = 0
             return decision2, conf2, dec2
         else:
             break
@@ -276,8 +308,8 @@ def settle_round(
             player.current_bet = split_bet
             had_hands = True
 
-            winner = determine_winner(split_hand, dealer_hand)
-            multiplier = get_payout_multiplier(winner, split_hand)
+            winner = determine_winner(split_hand, dealer_hand, allow_player_natural=False)
+            multiplier = get_payout_multiplier(winner, split_hand, allow_player_natural=False)
 
             if winner == "win":
                 player.wins += 1
@@ -299,6 +331,9 @@ def settle_round(
                 decision=split_dec if is_ai else "",
                 bet=split_bet,
                 balance=player.balance,
+                latency_ms=player.avg_latency_ms() if is_ai else 0.0,
+                tokens=int(round(player.avg_tokens())) if is_ai else 0,
+                decisions=player.decision_count if is_ai else 0,
             )
             result.hands.append(hand_result)
 
@@ -333,12 +368,11 @@ def settle_round(
                 decision=dec,
                 bet=player.current_bet,
                 balance=player.balance,
+                latency_ms=player.avg_latency_ms() if is_ai else 0.0,
+                tokens=int(round(player.avg_tokens())) if is_ai else 0,
+                decisions=player.decision_count if is_ai else 0,
             )
             result.hands.append(hand_result)
-
-            if is_ai:
-                result.ai_confidence = conf
-                result.ai_decision = dec
 
         if had_hands:
             player.balance_history.append(player.balance)

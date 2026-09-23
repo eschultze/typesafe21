@@ -60,7 +60,24 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_rounds_round ON player_rounds(round_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_player_rounds_name ON player_rounds(player_name)")
 
+        # Migrate older databases in place: benchmark metrics added after the
+        # table already existed. Existing rows keep NULL/0 for these.
+        _ensure_columns(cursor, "player_rounds", {
+            "latency_ms": "REAL DEFAULT 0",
+            "tokens": "INTEGER DEFAULT 0",
+            "decisions": "INTEGER DEFAULT 0",
+            "true_count": "REAL",
+        })
+
         conn.commit()
+
+
+def _ensure_columns(cursor, table: str, columns: dict[str, str]):
+    cursor.execute(f"PRAGMA table_info({table})")
+    existing = {row[1] for row in cursor.fetchall()}
+    for name, ddl in columns.items():
+        if name not in existing:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
 
 
 def clear_database():
@@ -100,8 +117,9 @@ def save_round(
             cursor.execute(
                 """
                 INSERT INTO player_rounds
-                (round_id, player_index, player_name, result, bet, confidence, decision, balance_after)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (round_id, player_index, player_name, result, bet, confidence, decision, balance_after,
+                 latency_ms, tokens, decisions, true_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     round_id,
@@ -112,6 +130,10 @@ def save_round(
                     pr.get("confidence", 0.0),
                     pr.get("decision", ""),
                     pr.get("balance_after", 0),
+                    pr.get("latency_ms", 0.0),
+                    pr.get("tokens", 0),
+                    pr.get("decisions", 0),
+                    pr.get("true_count"),
                 ),
             )
 
@@ -224,7 +246,7 @@ def get_top_single_turn_profits() -> list[dict]:
             )
             SELECT
                 session_id,
-                pr.player_name,
+                player_name,
                 round_number,
                 bet,
                 result,
@@ -295,3 +317,37 @@ def get_session_rounds(session_id: int) -> list[dict]:
             r["players"] = [dict(row) for row in cursor.fetchall()]
 
         return rounds
+
+
+def get_benchmark_rows(session_id: int | None = None) -> list[dict]:
+    """Flat player-round rows for benchmark aggregation.
+
+    Ordered so the caller can treat the last row for a given
+    (session, round, player) as the authoritative round-end record.
+    """
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        query = """
+            SELECT
+                r.session_id,
+                r.round_number,
+                pr.player_name,
+                pr.result,
+                pr.bet,
+                pr.confidence,
+                pr.decision,
+                pr.balance_after,
+                pr.latency_ms,
+                pr.tokens,
+                pr.decisions,
+                pr.true_count
+            FROM player_rounds pr
+            JOIN rounds r ON pr.round_id = r.id
+        """
+        params: tuple = ()
+        if session_id is not None:
+            query += " WHERE r.session_id = ?"
+            params = (session_id,)
+        query += " ORDER BY r.session_id, r.round_number, pr.id"
+        cursor.execute(query, params)
+        return [dict(row) for row in cursor.fetchall()]

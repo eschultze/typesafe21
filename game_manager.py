@@ -49,6 +49,9 @@ class GameSession:
         self.auto_play_delay_ms = 500
         self._auto_play_task: asyncio.Task | None = None
         self._auto_play_rounds: int | None = None
+        # Serializes play_round so a manual request and the auto-play loop (or
+        # two clients) cannot mutate the same session concurrently.
+        self._round_lock = asyncio.Lock()
 
     def new_game(self):
         self.deck = TrackedDeck(num_decks=6)
@@ -63,16 +66,16 @@ class GameSession:
         self.last_action = None
         return self.get_state()
 
-    def continue_game(self):
-        # TODO: State restoration is not yet implemented — always start fresh
-        # to prevent silent data corruption from stale session state.
-        return self.new_game()
-
     def get_state(self, reveal_dealer: bool = False) -> dict:
         dealer_dict = self.dealer_hand.to_dict() if self.dealer_hand.cards else None
         if dealer_dict and not reveal_dealer and len(dealer_dict["cards"]) > 0:
             dealer_dict["cards"][1] = {"rank": "?", "suit": "?", "value": 0}
             dealer_dict["value"] = self.dealer_hand.cards[0].value
+            # These flags are computed on the full hand; scrub them so the
+            # hidden hole card isn't leaked through is_blackjack/is_soft/is_bust.
+            dealer_dict["is_soft"] = False
+            dealer_dict["is_bust"] = False
+            dealer_dict["is_blackjack"] = False
 
         players = []
         for p in self.players:
@@ -85,6 +88,7 @@ class GameSession:
                 pushes=p.pushes,
                 hand=p.hand.to_dict(),
                 balance_history=p.balance_history,
+                can_play=p.can_play(),
             ).model_dump())
 
         current_player = None
@@ -106,6 +110,35 @@ class GameSession:
         ).model_dump()
 
     async def play_round(self, broadcast_fn=None) -> dict:
+        # Serialize rounds, and if anything fails (e.g. the remote AI is down)
+        # roll the round back and stay alive instead of tearing down the session.
+        async with self._round_lock:
+            snapshot = [
+                (p, p.balance, p.wins, p.losses, p.pushes, len(p.balance_history))
+                for p in self.players
+            ]
+            try:
+                return await self._play_round_inner(broadcast_fn)
+            except Exception as e:
+                traceback.print_exc()
+                self._rollback_round(snapshot)
+                self.auto_play = False
+                self.phase = "idle"
+                self.last_action = {"type": "error", "message": str(e)}
+                return self.get_state()
+
+    def _rollback_round(self, snapshot) -> None:
+        for p, balance, wins, losses, pushes, hist_len in snapshot:
+            p.balance = balance
+            p.wins = wins
+            p.losses = losses
+            p.pushes = pushes
+            p.current_bet = 0
+            p.reset_hand()
+            del p.balance_history[hist_len:]
+        self.dealer_hand = Hand()
+
+    async def _play_round_inner(self, broadcast_fn=None) -> dict:
         self.round_number += 1
 
         # Ensure we have a session to FK into
@@ -117,10 +150,12 @@ class GameSession:
         if broadcast_fn:
             await broadcast_fn({"type": "state_update", "state": self.get_state()})
             await asyncio.sleep(0)
+        true_count_at_bet = self.deck.true_count
         bets = await asyncio.to_thread(do_bets, self.players, self.deck)
         bet_results = [BetResult(
             name=b.name, bet=b.bet, is_ai=b.is_ai,
             reasoning=b.reasoning, confidence=b.confidence,
+            latency_ms=b.latency_ms, tokens=b.tokens,
         ).model_dump() for b in bets]
 
         # Deal
@@ -158,12 +193,16 @@ class GameSession:
                 "decision": decision,
                 "confidence": confidence,
                 "ai_decision": last_ai_decision,
+                "latency_ms": player.avg_latency_ms() if is_ai else 0.0,
+                "tokens": int(round(player.avg_tokens())) if is_ai else 0,
+                "decisions": player.decision_count if is_ai else 0,
             })
 
         # Dealer
         self.phase = "dealer_turn"
         if broadcast_fn:
-            await broadcast_fn({"type": "state_update", "state": self.get_state()})
+            # Reveal the hole card now that all players are done.
+            await broadcast_fn({"type": "state_update", "state": self.get_state(reveal_dealer=True)})
             await asyncio.sleep(0)
         await asyncio.to_thread(play_dealer, self.dealer_hand, self.deck)
 
@@ -182,6 +221,10 @@ class GameSession:
                 "confidence": hand_result.confidence,
                 "decision": hand_result.decision,
                 "balance_after": hand_result.balance,
+                "latency_ms": hand_result.latency_ms,
+                "tokens": hand_result.tokens,
+                "decisions": hand_result.decisions,
+                "true_count": true_count_at_bet,
             })
         await asyncio.to_thread(
             db.save_round, self.session_id, self.round_number, player_results, self.dealer_hand.value
@@ -203,9 +246,10 @@ class GameSession:
                     decision=h.decision,
                     bet=h.bet,
                     balance=h.balance,
+                    latency_ms=h.latency_ms,
+                    tokens=h.tokens,
+                    decisions=h.decisions,
                 ).model_dump() for h in result.hands],
-                "ai_confidence": result.ai_confidence,
-                "ai_decision": result.ai_decision,
             },
         }
 

@@ -17,10 +17,31 @@ class Player(ABC):
         self.current_bet = 0
         self.split_hands: list[tuple[Hand, int, str, float]] = []
         self.balance_history: list[int] = [STARTING_BALANCE]
+        # Per-round AI decision accounting, reset at the start of each round.
+        self.decision_latency_ms = 0.0
+        self.decision_tokens = 0
+        self.decision_count = 0
 
     def reset_hand(self):
         self.hand.clear()
         self.split_hands.clear()
+
+    def reset_round_stats(self):
+        """Clear AI call accounting for a new round (covers bet + play calls)."""
+        self.decision_latency_ms = 0.0
+        self.decision_tokens = 0
+        self.decision_count = 0
+
+    def record_ai_call(self, result: dict):
+        self.decision_latency_ms += result.get("latency_ms", 0.0)
+        self.decision_tokens += result.get("tokens", 0)
+        self.decision_count += 1
+
+    def avg_latency_ms(self) -> float:
+        return self.decision_latency_ms / self.decision_count if self.decision_count else 0.0
+
+    def avg_tokens(self) -> float:
+        return self.decision_tokens / self.decision_count if self.decision_count else 0.0
 
     def reset_session(self):
         self.wins = 0
@@ -56,15 +77,6 @@ class Player(ABC):
 
     def decide_bet(self, deck: TrackedDeck) -> int:
         return MIN_BET
-
-    def record_result(self, result: str):
-        if result == "win":
-            self.wins += 1
-        elif result == "lose":
-            self.losses += 1
-        elif result == "push":
-            self.pushes += 1
-        self.balance_history.append(self.balance)
 
     def to_dict(self) -> dict:
         return {
@@ -130,6 +142,8 @@ class AIPlayer(Player):
         self.last_decision = ""
         self.last_probabilities = {}
         self.last_bet_info = {}
+        self.last_latency_ms = 0.0
+        self.last_tokens = 0
 
     def make_decision(
         self,
@@ -154,6 +168,9 @@ class AIPlayer(Player):
         self.last_confidence = result["confidence"]
         self.last_decision = result["decision"]
         self.last_probabilities = result["probabilities"]
+        self.last_latency_ms = result.get("latency_ms", 0.0)
+        self.last_tokens = result.get("tokens", 0)
+        self.record_ai_call(result)
 
         return result["decision"]
 
@@ -177,6 +194,9 @@ class AIPlayer(Player):
         )
 
         self.last_bet_info = result
+        self.last_latency_ms = result.get("latency_ms", 0.0)
+        self.last_tokens = result.get("tokens", 0)
+        self.record_ai_call(result)
         bet = max(MIN_BET, min(result["bet"], self.balance))
         return bet
 
@@ -188,6 +208,8 @@ class LayaPlayer(Player):
         self.last_decision = ""
         self.last_probabilities = {}
         self.last_bet_info = {}
+        self.last_latency_ms = 0.0
+        self.last_tokens = 0
 
     def make_decision(
         self,
@@ -212,6 +234,9 @@ class LayaPlayer(Player):
         self.last_confidence = result["confidence"]
         self.last_decision = result["decision"]
         self.last_probabilities = result["probabilities"]
+        self.last_latency_ms = result.get("latency_ms", 0.0)
+        self.last_tokens = result.get("tokens", 0)
+        self.record_ai_call(result)
 
         return result["decision"]
 
@@ -235,5 +260,8 @@ class LayaPlayer(Player):
         )
 
         self.last_bet_info = result
+        self.last_latency_ms = result.get("latency_ms", 0.0)
+        self.last_tokens = result.get("tokens", 0)
+        self.record_ai_call(result)
         bet = max(MIN_BET, min(result["bet"], self.balance))
         return bet
